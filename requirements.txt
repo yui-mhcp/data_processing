@@ -14,5 +14,5 @@ noisereduce
 matplotlib
 Unidecode
 opencv-python
-tensorflow==2.3.2
+tensorflow
 librosa

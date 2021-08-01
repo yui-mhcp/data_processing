@@ -150,6 +150,7 @@
         "ukn_74",
         "ukn_75"
     ],
+    "level": 0,
     "cleaners": [
         "fr_convert_to_ascii",
         {
@@ -158,7 +159,13 @@
         },
         "collapse_whitespace"
     ],
-    "word_level": false,
-    "ukn_text": null,
+    "split_pattern": null,
+    "bpe_pairs": null,
+    "byte_encoder": null,
+    "pad_token": "",
+    "ukn_token": null,
+    "sos_token": "[SOS]",
+    "eos_token": "[EOS]",
+    "sub_word_prefix": "",
     "use_sos_and_eos": false
 }

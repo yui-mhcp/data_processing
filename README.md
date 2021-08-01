@@ -1,4 +1,4 @@
-# Data processing utilities
+# :yum: Data processing utilities
 
 This repository is a set of utilities for data processing in audio, image and text and provide generic functions for data vizualisation. 
 
@@ -78,6 +78,7 @@ This is part of the [main project](https://github.com/yui-mhcp/base_dl_project) 
 | cleaning  | `cleaners.py`    | multiple cleaners for text normalization  |
 | encoding / decoding   | `TextEncoder` | class to facilitate text encoding / decoding / cleaning   |
 | splitting | `split_text`  | multi-phase text splitting for a more consistent split    |
+| Byte-Pair Encoding (BPE)  | `bpe / TextEncoder`   | you can use the `TextEncoder` for token-based encoding and `BPE` based encoding   |
 
 - **Distance** (module `utils.distance`) :
 
