@@ -151,6 +151,8 @@
         "ukn_75"
     ],
     "level": 0,
+    "lstrip": false,
+    "rstrip": false,
     "cleaners": [
         "fr_convert_to_ascii",
         {
@@ -163,9 +165,11 @@
     "bpe_pairs": null,
     "byte_encoder": null,
     "pad_token": "",
+    "sep_token": null,
     "ukn_token": null,
     "sos_token": "[SOS]",
     "eos_token": "[EOS]",
+    "mask_token": null,
     "sub_word_prefix": "",
     "use_sos_and_eos": false
 }
