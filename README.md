@@ -107,6 +107,8 @@ This is part of the [main project](https://github.com/yui-mhcp/base_dl_project) 
 3. Install requirements : `pip install -r requirements.txt`
 4. Open an example notebook and follow the instructions !
 
+**For audio processing** : you should also install `ffmpeg` if you want to use some audio processing functions.
+
 ## TO-DO list
 
 - [x] Make example for audio processing
@@ -120,14 +122,14 @@ This is part of the [main project](https://github.com/yui-mhcp/base_dl_project) 
 ## Future improvments 
 
 - Audio processing
-    - [ ] Try to improve the audio annotation procedure.
+    - [x] Try to improve the audio annotation procedure.
     - [ ] See how to improve the trimming / remove silence processing
 - Image processing.
     - [x] Clean and optimize the code.
     - [x] Add image loading / writing support.
 - Text processing
-    - [ ] Add support for token-splitting instead of word-splitting in the `TextEncoder`.
-    - [ ] Add better support for Transformers (will come when adding Q&A / translation support). 
+    - [x] Add support for token-splitting instead of word-splitting in the `TextEncoder`.
+    - [x] Add better support for Transformers. 
 - Plot functions :
     - [x] Better support subplots.
     - [ ] Allow to plot embeddings as subplot.
@@ -158,5 +160,5 @@ If you use this project in your work, please cite this project to give it more v
 
 - [1] The text processing part is highly inspired from [NVIDIA tacotron2](https://github.com/NVIDIA/tacotron2) repository which I modified to be used in tensorflow. Same for the `audio/stft.py` which I optimized in tensorflow and added support for other kind of STFT computation (inspired from Jasper, DeepSpeech, ...) projects.
 
-- [2] The provided embeddings in `example_data/embeddings/embeddings_256_voxforge.csv` are samples from the [FoxForge](http://www.voxforge.org/) dataset and embedded with my [AudioSiamese](https://github.com/yui-mhcp/siamese_networks) `audio_siamese_256_mel_lstm` model.
+- [2] The provided embeddings in `example_data/embeddings/embeddings_256_voxforge.csv` are samples from the [VoxForge](http://www.voxforge.org/) dataset and embedded with my [AudioSiamese](https://github.com/yui-mhcp/siamese_networks) `audio_siamese_256_mel_lstm` model.
 
