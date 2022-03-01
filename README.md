@@ -142,9 +142,13 @@ You can contact [me](https://github.com/yui-mhcp) at yui-mhcp@tutanota.com or on
 The objective of these projects is to facilitate the development and deployment of useful application using Deep Learning for solving real-world problems and helping people. 
 For this purpose, all the code is under the [Affero GPL (AGPL) v3 licence](LICENCE)
 
-Furthermore, you **cannot** use any of these projects for commercial purpose without my permission. You can use, modify, distribute and use any of my projects for production as long as you respect the terms of the [licence](LICENCE) and use it for non-commercial purposes (i.e. free applications / research). 
+All my projects are "free software", meaning that you can use, modify, deploy and distribute them on a free basis, in compliance with the Licence. They are not in the public domain and are copyrighted, there exist some conditions on the distribution but their objective is to make sure that everyone is able to use and share any modified version of these projects. 
 
-If you use this project in your work, please cite this project to give it more visibility ! :smile:
+Furthermore, if you want to use any project in a closed-source project, or in a commercial project, you will need to obtain another Licence. Please contact me for more information. 
+
+For my protection, it is important to note that all projects are available on an "As Is" basis, without any warranties or conditions of any kind, either explicit or implied. However, do not hesitate to report issues on the repository's project or make a Pull Request to solve it :smile: 
+
+If you use this project in your work, please add this citation to give it more visibility ! :yum:
 
 ```
 @misc{yui-mhcp
