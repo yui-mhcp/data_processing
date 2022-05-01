@@ -34,7 +34,9 @@ This is part of the [main project](https://github.com/yui-mhcp/base_dl_project) 
 │   ├── numbers.py              : expand numbers to text / numbers normalization
 │   ├── text_encoder.py         : utility class for text encoding / decoding efficiently
 │   └── text_processing.py      : functions for text processing
+├── comparison_utils.py     : generic functions to compare data (mainly used for unitests)
 ├── embeddings.py           : utilities for embeddings loading / saving / processing
+├── file_utils.py           : generic functions for data saving / loading
 ├── generic_utils.py        : generic functions such as loading / saving json, ...
 ├── pandas_utils.py         : utilities for pd.DataFrame processing
 ├── plot_utils.py           : custom functions to make fancy graphs !

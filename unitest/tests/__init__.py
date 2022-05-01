@@ -14,11 +14,11 @@ import os
 import glob
 
 def __load():
-    for test_filename in glob.glob('test/*.py'):
+    for test_filename in glob.glob('unitest/tests/*.py'):
         if '__init__' in test_filename: continue
             
-        test_filename = test_filename.replace(os.path.sep, '.')[: -3]
+        module_name = test_filename.replace(os.path.sep, '.').replace('/', '.')[: -3]
 
-        module = __import__(test_filename)
+        module = __import__(module_name)
 
 __load()
