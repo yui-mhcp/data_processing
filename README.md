@@ -34,13 +34,18 @@ This is part of the [main project](https://github.com/yui-mhcp/base_dl_project) 
 │   ├── numbers.py              : expand numbers to text / numbers normalization
 │   ├── text_encoder.py         : utility class for text encoding / decoding efficiently
 │   └── text_processing.py      : functions for text processing
+├── thread_utils/   : utilities for multi-threaded code
+│   ├── consumer.py             : `Consumer` class for the `producer-consumer` framework
+│   ├── pipeline.py             : utility to produce a pipeline of `producer-consumers`
+│   ├── producer.py             : `Producer` class for the `producer-consumer` framework
+│   ├── threaded_dict.py        : `thread-safe` dict with blocking `get` operation
+│   └── threaded_queue.py       : `thread-safe` queue with multiple features
 ├── comparison_utils.py     : generic functions to compare data (mainly used for unitests)
 ├── embeddings.py           : utilities for embeddings loading / saving / processing
 ├── file_utils.py           : generic functions for data saving / loading
 ├── generic_utils.py        : generic functions such as loading / saving json, ...
 ├── pandas_utils.py         : utilities for pd.DataFrame processing
 ├── plot_utils.py           : custom functions to make fancy graphs !
-└── thread_utils.py         : `ThreadPool` class to parallelize tasks
 
 ```
 
@@ -56,7 +61,7 @@ This is part of the [main project](https://github.com/yui-mhcp/base_dl_project) 
 | loading   | `load_audio`  | load audio from multiple formats such as wav, mp3, ...    |
 | writing   | `write_audio` | save audio to wav or mp3  | 
 | noise reduction   | `reduce_noise`    | use the `noisereduce` library to reduce noise |
-| silence detection | `trim_silence`    | trim silence (start / end) or remove it       |
+| silence trimming  | `trim_silence`    | trim silence (start / end) or remove it       |
 | STFT / FMCC       | `MelSTFT class`   | abstract class supporting multiple STFT implementation (compatible with different models), all supporting `tensorflow 2.x graph`|
 
 - **Image** (module `utils.image`) :
@@ -98,7 +103,8 @@ This is part of the [main project](https://github.com/yui-mhcp/base_dl_project) 
 | plot      | `plot`        | utility that combines multiple `matplotlib` functions in one bigger function |
 | plot spectrogram  | `plot_spectrogram`    | utility that calls `plot` with some default parameters specific to spectrograms    |
 | plot embeddings   | `plot_embedding`  | utility that calls `plot` after creating a 2D representation of N-D vectors (the embeddings)  |
-| load / dump json  | `{load / dump}_json`  | utilities for safe json file manipulation |
+| plot confusion matrix | `plot_confusion_matrix`  | creates a heatmap representing the confusion matrix (based on labels / predictions).  |
+| load / dump data  | `{load / dump}_data`  | utilities for safe json file manipulation |
 | DataFrame manipulation    | `pandas_utils.py` | utilities to aggregate / filter DataFrame |
 | embeddings manipulation   | `embeddings.py`   | utilities to load / save / ... embeddings data    |
 
@@ -118,23 +124,31 @@ This is part of the [main project](https://github.com/yui-mhcp/base_dl_project) 
 - [x] Make example for text processing
 - [x] Make example for plot utils
 - [x] Make example for embeddings
+- [x] Make example for the `producer-consumer` utility
 - [ ] Make example for audio annotation
 - [x] Comment all functions to facilitate their comprehension / usage
 
 ## Future improvments 
 
-- Audio processing
-    - [x] Try to improve the audio annotation procedure.
+- Audio processing :
+    - [x] Improve the audio annotation procedure.
     - [ ] See how to improve the trimming / remove silence processing
-- Image processing.
+- Image processing :
     - [x] Clean and optimize the code.
     - [x] Add image loading / writing support.
-- Text processing
+    - [x] Add video loading / writing support.
+    - [ ] Improve the `stream_camera` to better synchronize the frames with audio (when `play_audio = True`)
+- Text processing :
     - [x] Add support for token-splitting instead of word-splitting in the `TextEncoder`.
     - [x] Add better support for Transformers. 
+    - [x] Add support for `sentencepiece` encoders.
+- Thread utilities :
+    - [x] Add the possibility to create a pipeline based on a list of functions.
+    - [x] Allow to plot a `producer-consumer` pipeline with `graphviz`. 
+    - [ ] Add `unitest` to ensure correctness. 
 - Plot functions :
     - [x] Better support subplots.
-    - [ ] Allow to plot embeddings as subplot.
+    - [x] Allow to plot embeddings as subplot.
     - [ ] Add 3D plot support.
 
 ## Contacts and licence

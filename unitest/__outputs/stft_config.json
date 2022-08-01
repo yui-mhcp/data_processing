@@ -7,5 +7,9 @@
     "sampling_rate": 22050,
     "mel_fmin": 0.0,
     "mel_fmax": 8000.0,
-    "normalize_mode": null
+    "normalize_mode": null,
+    "pre_emph": 0.0,
+    "window": "hann",
+    "to_magnitude": true,
+    "periodic": true
 }
