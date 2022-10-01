@@ -164,6 +164,7 @@
     "split_pattern": null,
     "bpe_pairs": null,
     "byte_encoder": null,
+    "bpe_end_of_word": null,
     "pad_token": "",
     "sep_token": null,
     "ukn_token": null,
