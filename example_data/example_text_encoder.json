@@ -154,12 +154,10 @@
     "lstrip": false,
     "rstrip": false,
     "cleaners": [
-        "fr_convert_to_ascii",
         {
-            "name": "expand_numbers",
-            "langue": "fr"
-        },
-        "collapse_whitespace"
+            "name": "french_cleaners",
+            "to_lowercase": false
+        }
     ],
     "split_pattern": null,
     "bpe_pairs": null,
