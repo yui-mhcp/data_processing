@@ -6,7 +6,7 @@ matplotlib
 moviepy
 noisereduce
 num2words
-numpy==1.20.0
+numpy
 opencv_python
 pandas
 pdfminer.six
@@ -16,10 +16,9 @@ python_speech_features
 pytube3
 regex
 requests
-scipy
 sentencepiece
 tensorboard
-tensorflow
+tensorflow_intel
 torch
 tqdm
 transformers
