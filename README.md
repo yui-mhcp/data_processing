@@ -4,6 +4,8 @@ This repository is a set of utilities for data processing in audio, image and te
 
 It is a part of the [main project](https://github.com/yui-mhcp/base_dl_project) on Deep Learning : it is a submodule used in all other projects for data processing / monitoring. 
 
+**NEW : [CHANGELOG](https://github.com/yui-mhcp/yui-mhcp/blob/main/CHANGELOG.md) file ! Check it to have a global overview of the latest modifications !** :yum:
+
 ## Project structure
 
 ```bash
@@ -14,7 +16,8 @@ It is a part of the [main project](https://github.com/yui-mhcp/base_dl_project) 
 │   ├── tts_handler.py      : allow to log messages via the TTS models
 ├── unitest             : unitest framework (experimental)
 │   ├── tests
-│   └── test.py
+│   ├── test.py
+│   └── test_methods.py
 ├── utils               : main utilities directory
 │   ├── audio           : audio processing utilities 
 │   │   ├── audio_annotation.py     : allows to annotate an audio by adding information to frames
@@ -165,12 +168,17 @@ The `utils/{data_type}` modules are note loaded by default meaning that it is no
 
 - Audio processing :
     - [x] Improve the audio annotation procedure.
-    - [ ] See how to improve the trimming / remove silence processing
+    - [x] Allow to extract the audio from videos.
+    - [ ] Allow to add subtitles on a video.
 - Image processing :
     - [x] Clean and optimize the code.
     - [x] Add image loading / writing support.
     - [x] Add video loading / writing support.
     - [ ] Improve the `stream_camera` to better synchronize the frames with audio (when `play_audio = True`)
+    - [ ] Add support for segmentation masking
+        - [x] Add support for polygon masks
+        - [ ] Add support for RLE masks
+    - [ ] Add support for rotated bounding boxes
 - Text processing :
     - [x] Add support for token-splitting instead of word-splitting in the `TextEncoder`.
     - [x] Add better support for Transformers. 
@@ -185,9 +193,11 @@ The `utils/{data_type}` modules are note loaded by default meaning that it is no
     - [x] Add the possibility to create a pipeline based on a list of functions.
     - [x] Allow to plot a `producer-consumer` pipeline with `graphviz`. 
     - [ ] Add `unitest` to ensure correctness. 
+    - [ ] Add a `Barrier`-like Consumer : to perform multiple tasks in parallel, then wait that they have all finished before sending the result.
 - Plot functions :
     - [x] Better support subplots.
     - [x] Allow to plot embeddings as subplot.
+    - [x] Add support for audio plot (to plot the time (in sec) on the x-axis)
     - [ ] Add 3D plot support.
 
 ## Pipeline-based prediction
