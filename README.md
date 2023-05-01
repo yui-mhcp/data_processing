@@ -1,8 +1,8 @@
 # :yum: Data processing utilities
 
-This repository is a set of utilities for data processing in audio, image and text. It also provides generic functions for data vizualisation (cf `utils/plot_utils.py`). 
+This repository contains a set of utilities for data processing in audio, image and text. It also provides generic functions for data vizualisation (cf `utils/plot_utils.py`). 
 
-It is a part of the [main project](https://github.com/yui-mhcp/base_dl_project) on Deep Learning : it is a submodule used in all other projects for data processing / monitoring. 
+It is part of the [main project](https://github.com/yui-mhcp/base_dl_project) on Deep Learning : it is a submodule used in all other projects for data processing / monitoring. 
 
 **NEW : [CHANGELOG](https://github.com/yui-mhcp/yui-mhcp/blob/main/CHANGELOG.md) file ! Check it to have a global overview of the latest modifications !** :yum:
 
@@ -198,17 +198,7 @@ The `utils/{data_type}` modules are note loaded by default meaning that it is no
     - [x] Better support subplots.
     - [x] Allow to plot embeddings as subplot.
     - [x] Add support for audio plot (to plot the time (in sec) on the x-axis)
-    - [ ] Add 3D plot support.
-
-## Pipeline-based prediction
-
-Some models (in other projects) support the `pipeline-based` prediction, meaning that tasks are executed within the `Producer Consumer` framework. You can disable the multi-threading feature by passing `max_workers = -1 (or -2)` to the prediction's functions but it will obviously slow down the global prediction time. 
-
-It is important to notice that it does **not** reduce the processing time of a single data, which still has to pass through all the functions (at least for sequential tasks). However it can improve a lot the global performances as the total time is now `the number of data * longest_task_time` instead of `the number of data * pipeline time`, which makes a huge difference in this case. 
-
-Another benefit is that you can add tasks in parallel of other tasks : this is useful for streaming where the video writing / frame showing can be performed in parallel of the pipeline (check [the example notebook](example_producer_consumer.ipynb) for the illustration). 
-
-The framework also supports batching (`batch_size` argument) and result saving (`filename` argument of the `Pipeline` object) which are useful features in model prediction. 
+    - [x] Add 3D plot support.
 
 ## Contacts and licence
 
