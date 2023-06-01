@@ -35,6 +35,7 @@ It is part of the [main project](https://github.com/yui-mhcp/base_dl_project) on
 │   │   └── knn.py              : K-NN implementation in tensorflow
 │   ├── image           : image utilities
 │   │   ├── box_utils.py            : utilities for Bounding Box drawing / ...
+│   │   ├── geo_utils.py            : utilities for geometrical operations (used in the EAST text detector)
 │   │   ├── image_augmentation.py   : some augmentation functions for images
 │   │   ├── image_io.py             : image / video writing / loading functions
 │   │   ├── image_utils.py          : some utilities
@@ -127,8 +128,9 @@ It is not an exhaustive list of all the available features / functions but an in
 | :-------- | :---------------- | :---------- |
 | distance  | `distance`    | allow computing distance supporting multiple metrics (`euclidian`, `manhattan`, `levenstein`) |
 | K-NN      | `KNN`     | fully optimizerd KNN implementation in `tensorflow 2.x graph` |
-| KMeans    | `KMeans`  | implementation of the `KMeans` clustering algorithm ein `tensorflow` (also supports methodology to determine best value for `k`)  |
-| KPropagation  | `KPropagation`    | custom clustering algorithm to propagate label based on a `similarity_matrix` (useful for the [Siamese Networks](https://github.com/yui-mhcp/siamese_networks)) |
+| KMeans    | `kmeans`  | implementation of the `KMeans` clustering algorithm ein `tensorflow` (also supports methodology to determine best value for `k`)  |
+| Label Propagation  | `label_propagation`    | custom clustering algorithm to propagate label based on a `similarity_matrix` (useful for the [Siamese Networks](https://github.com/yui-mhcp/siamese_networks)) |
+| Spectral Clustering   | `spectral_clustering` | Implementation of the spectral clustering algorithm in pure `tensorflow`  |
 
 - **Generic** (module `utils`) :
 
@@ -149,9 +151,11 @@ It is not an exhaustive list of all the available features / functions but an in
 3. Install requirements : `pip install -r requirements.txt`
 4. Open an example notebook and follow the instructions !
 
-The `utils/{data_type}` modules are note loaded by default meaning that it is not required to install the requirements for a given submodule if you do not want to use it. In this case, you can simply remove the submodule and run the `pipreqs` command to compute a new `requirements.txt` file.
+The `utils/{data_type}` modules are note loaded by default, meaning that it is not required to install the requirements for a given submodule if you do not want to use it. In this case, you can simply remove the submodule and run the `pipreqs` command to compute a new `requirements.txt` file.
 
 **For audio processing** : you should also install `ffmpeg` if you want to use some audio processing functions (especially the `.mp3` support).
+
+**Important Note** : some *heavy* requirements are removed in order to avoid unnecessary installation of such packages (e.g. `torch` and `transformers`), as they are used only in very specific functions.  It is therefore possible that some `ImportError` occurs when using specific functions, such as `TextEncoder.from_transformers_pretrained(...)`. 
 
 ## TO-DO list
 
@@ -175,10 +179,10 @@ The `utils/{data_type}` modules are note loaded by default meaning that it is no
     - [x] Add image loading / writing support.
     - [x] Add video loading / writing support.
     - [ ] Improve the `stream_camera` to better synchronize the frames with audio (when `play_audio = True`)
-    - [ ] Add support for segmentation masking
+    - [x] Add support for segmentation masking
         - [x] Add support for polygon masks
         - [ ] Add support for RLE masks
-    - [ ] Add support for rotated bounding boxes
+    - [x] Add support for rotated bounding boxes
 - Text processing :
     - [x] Add support for token-splitting instead of word-splitting in the `TextEncoder`.
     - [x] Add better support for Transformers. 
@@ -192,8 +196,6 @@ The `utils/{data_type}` modules are note loaded by default meaning that it is no
 - Thread utilities :
     - [x] Add the possibility to create a pipeline based on a list of functions.
     - [x] Allow to plot a `producer-consumer` pipeline with `graphviz`. 
-    - [ ] Add `unitest` to ensure correctness. 
-    - [ ] Add a `Barrier`-like Consumer : to perform multiple tasks in parallel, then wait that they have all finished before sending the result.
 - Plot functions :
     - [x] Better support subplots.
     - [x] Allow to plot embeddings as subplot.
@@ -227,7 +229,7 @@ If you use this project in your work, please add this citation to give it more v
 
 ## Notes and references 
 
-- [1] The text processing part is highly inspired from [NVIDIA tacotron2](https://github.com/NVIDIA/tacotron2) repository which I modified to be used in tensorflow. Same for the `audio/stft.py` which I optimized in tensorflow and added support for other kind of STFT computation (inspired from Jasper, DeepSpeech, ...) projects.
+- [1] The text cleaning (`text.cleaners`) part is highly inspired from [NVIDIA tacotron2](https://github.com/NVIDIA/tacotron2) repository, which I modified to be used in tensorflow. I have also optimized the `audio/stft.py` in pure tensorflow, and to also support for other kind of STFT computation (inspired from Jasper, DeepSpeech, ...) projects.
 
 - [2] The provided embeddings in `example_data/embeddings/embeddings_256_voxforge.csv` are samples from the [VoxForge](http://www.voxforge.org/) dataset and embedded with my [AudioSiamese](https://github.com/yui-mhcp/siamese_networks) `audio_siamese_256_mel_lstm` model.
 

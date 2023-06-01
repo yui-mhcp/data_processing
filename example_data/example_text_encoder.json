@@ -170,5 +170,6 @@
     "eos_token": "[EOS]",
     "mask_token": null,
     "sub_word_prefix": "",
-    "use_sos_and_eos": false
+    "use_sos_and_eos": false,
+    "add_special_tokens_at_end": true
 }
