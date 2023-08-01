@@ -4,7 +4,7 @@ This repository contains a set of utilities for data processing in audio, image 
 
 It is part of the [main project](https://github.com/yui-mhcp/base_dl_project) on Deep Learning : it is a submodule used in all other projects for data processing / monitoring. 
 
-**NEW : [CHANGELOG](https://github.com/yui-mhcp/yui-mhcp/blob/main/CHANGELOG.md) file ! Check it to have a global overview of the latest modifications !** :yum:
+Check the [CHANGELOG](https://github.com/yui-mhcp/yui-mhcp/blob/main/CHANGELOG.md) file to have a global overview of the latest modifications ! :yum:
 
 ## Project structure
 
@@ -34,8 +34,12 @@ It is part of the [main project](https://github.com/yui-mhcp/base_dl_project) on
 │   │   ├── k_propagation.py    : custom algorithm to cluster based on K-most similar data
 │   │   └── knn.py              : K-NN implementation in tensorflow
 │   ├── image           : image utilities
-│   │   ├── box_utils.py            : utilities for Bounding Box drawing / ...
-│   │   ├── geo_utils.py            : utilities for geometrical operations (used in the EAST text detector)
+│   │   ├── box_utils           : utilities for Bounding Box manipulation
+│   │   │   ├── bounding_box.py     : BoundingBox class used in the YOLO project
+│   │   │   ├── box_filters.py      : experimental box filtering strategies for OCR streaming
+│   │   │   ├── box_functions.py    : general functions to convert format, draw, crop, ...
+│   │   │   ├── geo_utils.py        : general functions for geometrical operations on boxes
+│   │   │   └── nms.py              : implementations of the Non Maximum Suppression strategies
 │   │   ├── image_augmentation.py   : some augmentation functions for images
 │   │   ├── image_io.py             : image / video writing / loading functions
 │   │   ├── image_utils.py          : some utilities
@@ -183,6 +187,7 @@ The `utils/{data_type}` modules are note loaded by default, meaning that it is n
         - [x] Add support for polygon masks
         - [ ] Add support for RLE masks
     - [x] Add support for rotated bounding boxes
+    - [x] Add Locality-Aware NMS
 - Text processing :
     - [x] Add support for token-splitting instead of word-splitting in the `TextEncoder`.
     - [x] Add better support for Transformers. 
