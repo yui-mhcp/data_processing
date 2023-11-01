@@ -4,7 +4,7 @@ This repository contains a set of utilities for data processing in audio, image 
 
 It is part of the [main project](https://github.com/yui-mhcp/base_dl_project) on Deep Learning : it is a submodule used in all other projects for data processing / monitoring. 
 
-Check the [CHANGELOG](https://github.com/yui-mhcp/yui-mhcp/blob/main/CHANGELOG.md) file to have a global overview of the latest modifications ! :yum:
+Check the [CHANGELOG](https://github.com/yui-mhcp/yui-mhcp/blob/main/CHANGELOG.md) file to have a global overview of the latest updates / new features ! :yum:
 
 ## Project structure
 
@@ -14,10 +14,9 @@ Check the [CHANGELOG](https://github.com/yui-mhcp/yui-mhcp/blob/main/CHANGELOG.m
 │   ├── telegram_handler.py : allows to log messages via Telegram bot
 │   ├── time_logger.py      : utilities to log functions' performances'
 │   ├── tts_handler.py      : allow to log messages via the TTS models
-├── unitest             : unitest framework (experimental)
-│   ├── tests
-│   ├── test.py
-│   └── test_methods.py
+├── unitests            : unitest framework (experimental)
+│   ├── __init__.py         : defines a custom TestCase for more powerful assertEqual definition
+│   └── test_*.py           : unit testing files
 ├── utils               : main utilities directory
 │   ├── audio           : audio processing utilities 
 │   │   ├── audio_annotation.py     : allows to annotate an audio by adding information to frames
@@ -28,38 +27,43 @@ Check the [CHANGELOG](https://github.com/yui-mhcp/yui-mhcp/blob/main/CHANGELOG.m
 │   │   ├── mkv_utils.py            : processing functions for .mkv files
 │   │   └── stft.py                 : multiple implementations of the STFT and MFCC in tensorflow
 │   ├── distance        : distance utilities (clustering / comparison)
-│   │   ├── clustering.py       : abstract clustering class
-│   │   ├── distance_method.py  : some distance functions
-│   │   ├── k_means.py          : K-means implementation in tensorflow
-│   │   ├── k_propagation.py    : custom algorithm to cluster based on K-most similar data
-│   │   └── knn.py              : K-NN implementation in tensorflow
+│   │   ├── clustering.py           : generic clustering functions + wrapper
+│   │   ├── distance_method.py      : some distance functions
+│   │   ├── k_means.py              : K-means implementation in tensorflow
+│   │   ├── knn.py                  : K-Nearest Neighbors implementation in tensorflow
+│   │   ├── label_propagation.py    : custom algorithm to cluster based on label propagation
+│   │   └── spectral_clustering.py  : tensorflow implementation of the spectral clustering algorithm
 │   ├── image           : image utilities
 │   │   ├── box_utils           : utilities for Bounding Box manipulation
 │   │   │   ├── bounding_box.py     : BoundingBox class used in the YOLO project
 │   │   │   ├── box_filters.py      : experimental box filtering strategies for OCR streaming
 │   │   │   ├── box_functions.py    : general functions to convert format, draw, crop, ...
 │   │   │   ├── geo_utils.py        : general functions for geometrical operations on boxes
-│   │   │   └── nms.py              : implementations of the Non Maximum Suppression strategies
+│   │   │   └── nms_methods.py      : implementations of the Non Maximum Suppression strategies
+│   │   ├── custom_cameras.py       : custom objects usable in the stream_camera function
 │   │   ├── image_augmentation.py   : some augmentation functions for images
 │   │   ├── image_io.py             : image / video writing / loading functions
+│   │   ├── image_normalization.py  : normalization schemes used by model architectures
 │   │   ├── image_utils.py          : some utilities
 │   │   ├── mask_utils.py           : utility functions for masking
 │   │   └── video_utils.py          : video functions (copy / extract audio, ...)
 │   ├── text            : functions for text processing (encoding / decoding)
+│   │   ├── abreviations            : json files of abreviations in multiple languages (experimental)
 │   │   ├── document_parser         : functions to extract text from documents (experimental)
 │   │   │   ├── docx_parser.py
 │   │   │   ├── html_parser.py
+│   │   │   ├── parser.py
 │   │   │   ├── parser_utils.py
 │   │   │   ├── pdf_parser.py
 │   │   │   └── txt_parser.py
 │   │   ├── bpe.py                  : Byte-Pair-Encoding (BPE) functions
 │   │   ├── cleaners.py             : many functions to clean text
 │   │   ├── cmudict.py
+│   │   ├── ctc_decoder.py          : CTC decoding methods (greedy / beam-search)
 │   │   ├── f1.py                   : F1-metric function (inspired from SQUAD evaluation script)
 │   │   ├── numbers.py              : functions to convert numbers to text
 │   │   ├── sentencepiece_encoder.py    : TextEncoder subclass to support sentencepiece encoders
 │   │   ├── text_augmentation.py    : some operations for text masking
-│   │   ├── text_decoder.py         : functions to decode text (such as Beam Search support)
 │   │   ├── text_encoder.py         : main TextEncoder class 
 │   │   └── text_processing.py      : some text processing functions (such as splitting)
 │   ├── thread_utils        : producer-consumer framework
@@ -76,7 +80,10 @@ Check the [CHANGELOG](https://github.com/yui-mhcp/yui-mhcp/blob/main/CHANGELOG.m
 │   ├── generic_utils.py    : generic utility functions
 │   ├── pandas_utils.py     : utilities to manipulated pandas.DataFrame
 │   ├── plot_utils.py       : plot functions that groups multiple features from matplotlib.pyplot
-│   └── sequence_utils.py   : utilities for sequence manipulation (such as pad_batch)
+│   ├── sequence_utils.py   : utilities for sequence manipulation (such as pad_batch)
+│   ├── stream_utils.py     : utilities for functions streaming
+│   ├── tensorflow_utils.py : convenient tensorflow functions / features
+│   └── wrapper_utils.py    : useful wrappers to make beautiful and well-documented codes !
 ├── example_audio.ipynb
 ├── example_clustering.ipynb
 ├── example_generic.ipynb
@@ -155,11 +162,11 @@ It is not an exhaustive list of all the available features / functions but an in
 3. Install requirements : `pip install -r requirements.txt`
 4. Open an example notebook and follow the instructions !
 
-The `utils/{data_type}` modules are note loaded by default, meaning that it is not required to install the requirements for a given submodule if you do not want to use it. In this case, you can simply remove the submodule and run the `pipreqs` command to compute a new `requirements.txt` file.
+The `utils/{data_type}` modules are not loaded by default, meaning that it is not required to install the requirements for a given submodule if you do not want to use it. In this case, you can simply remove the submodule and run the `pipreqs` command to compute a new `requirements.txt` file !
 
-**For audio processing** : you should also install `ffmpeg` if you want to use some audio processing functions (especially the `.mp3` support).
+**For audio processing** : `ffmpeg` is required for some audio processing functions (especially the `.mp3` support).
 
-**Important Note** : some *heavy* requirements are removed in order to avoid unnecessary installation of such packages (e.g. `torch` and `transformers`), as they are used only in very specific functions.  It is therefore possible that some `ImportError` occurs when using specific functions, such as `TextEncoder.from_transformers_pretrained(...)`. 
+**Important Note** : some *heavy* requirements are removed in order to avoid unnecessary installation of such packages (e.g. `torch` and `transformers`), as they are only used in very specific functions.  It is therefore possible that some `ImportError` occurs when using specific functions, such as `TextEncoder.from_transformers_pretrained(...)`. 
 
 ## TO-DO list
 
@@ -175,9 +182,10 @@ The `utils/{data_type}` modules are note loaded by default, meaning that it is n
 ## Future improvments 
 
 - Audio processing :
-    - [x] Improve the audio annotation procedure.
-    - [x] Allow to extract the audio from videos.
-    - [ ] Allow to add subtitles on a video.
+    - [x] Improve the audio annotation procedure
+    - [x] Allow to extract the audio from videos
+    - [ ] Allow to add subtitles on a video
+    - [x] Enables audio playing without `IPython.display` autoplay feature
 - Image processing :
     - [x] Clean and optimize the code.
     - [x] Add image loading / writing support.
