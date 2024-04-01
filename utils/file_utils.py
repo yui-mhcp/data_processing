@@ -1,6 +1,5 @@
-
-# Copyright (C) 2022 yui-mhcp project's author. All rights reserved.
-# Licenced under the Affero GPL v3 Licence (the "Licence").
+# Copyright (C) 2022-now yui-mhcp project author. All rights reserved.
+# Licenced under a modified Affero GPL v3 Licence (the "Licence").
 # you may not use this file except in compliance with the License.
 # See the "LICENCE" file at the root of the directory for the licence information.
 #
@@ -16,12 +15,13 @@ import pickle
 import logging
 import numpy as np
 import pandas as pd
-import tensorflow as tf
+import keras.ops as K
 
 from tqdm import tqdm
+from keras import tree
 
 from utils.wrapper_utils import dispatch_wrapper, partial
-from utils.generic_utils import to_json, flatten, convert_to_str
+from utils.generic_utils import to_json, convert_to_str
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +54,7 @@ def normalize_filename(filename,
                 - str   : filename / directory path (if `recursive`, directories are extended)
                 - pd.DataFrame  : must have a `key` column
                 - dict      : must have a `key` entry
-                - tf.Tensor / np.ndarray / bytes    : string / bytes
+                - Tensor / np.ndarray / bytes    : string / bytes
             - keys  : the column / key to use if `filename` is a `dict` or `pd.DataFrame`
             - unix  : whether to convert path to unix-style (i.e. with '/' instead of '\')
             - recursive : whether to expand directories or not
@@ -76,11 +76,11 @@ def normalize_filename(filename,
     if isinstance(filename, str):
         if not os.path.isdir(filename): return filename if not unix else path_to_unix(filename)
         elif not recursive: return None
-        outputs = flatten([
+        outputs = tree.flatten([
             normalize_filename(os.path.join(filename, f)) for f in os.listdir(filename)
         ])
     elif isinstance(filename, (list, tuple)):
-        outputs = flatten([normalize_filename(
+        outputs = tree.flatten([normalize_filename(
             f, key = key, unix = unix, recursive = recursive, invalid_mode = invalid_mode
         ) for f in filename])
     else:
@@ -207,7 +207,7 @@ load_data.dispatch(pd.read_pickle, 'pdpkl')
 @dispatch_wrapper(_dump_file_fn, 'Filename extension')
 def dump_data(filename, data, overwrite = True, ** kwargs):
     """ Dumps `data` into `filename`. The saving function differ according to the extension. """
-    if isinstance(data, tf.Tensor): data = data.numpy()
+    if K.is_tensor(data): data = K.convert_to_numpy(data)
     ext = os.path.splitext(filename)[1][1:]
     
     if not ext:

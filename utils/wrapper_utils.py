@@ -1,5 +1,5 @@
-# Copyright (C) 2022 yui-mhcp project's author. All rights reserved.
-# Licenced under the Affero GPL v3 Licence (the "Licence").
+# Copyright (C) 2022-now yui-mhcp project author. All rights reserved.
+# Licenced under a modified Affero GPL v3 Licence (the "Licence").
 # you may not use this file except in compliance with the License.
 # See the "LICENCE" file at the root of the directory for the licence information.
 #
@@ -82,6 +82,18 @@ def add_dispatch_doc(fn,
         inspect.signature(_show_fn),
         '\n{}'.format(_show_fn.__doc__) if show_doc and _show_fn.__doc__ else ''
     )
+
+def args_to_kwargs(source_fn):
+    def wrapper(fn):
+        @functools.wraps(fn)
+        def inner(* args, ** kwargs):
+            kwargs.update({
+                arg_name : arg for arg_name, arg in zip(fn_args[: len(args)], args)
+            })
+            return fn(** kwargs)
+        fn_args = list(inspect.signature(source_fn).parameters.keys())
+        return inner
+    return wrapper
 
 def partial(fn = None, * partial_args, _force = False, ** partial_config):
     """

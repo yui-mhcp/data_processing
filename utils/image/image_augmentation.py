@@ -1,6 +1,5 @@
-
-# Copyright (C) 2022 yui-mhcp project's author. All rights reserved.
-# Licenced under the Affero GPL v3 Licence (the "Licence").
+# Copyright (C) 2022-now yui-mhcp project author. All rights reserved.
+# Licenced under a modified Affero GPL v3 Licence (the "Licence").
 # you may not use this file except in compliance with the License.
 # See the "LICENCE" file at the root of the directory for the licence information.
 #
@@ -10,8 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import tensorflow as tf
-
+from utils.keras_utils import ops
 from utils.generic_utils import get_kwargs
 from utils.wrapper_utils import dispatch_wrapper
 from utils.image.image_utils import resize_image, rotate_image
@@ -44,7 +42,7 @@ def augment_image(image, method, prct = 0.25, ** kwargs):
         Augments `image` by applying sequentially each `method`, each with `prct` probability
         
         Arguments :
-            - image     : `tf.Tensor`, the image to augment
+            - image     : `Tensor`, the image to augment
             - transforms    : (list of) str / callable, augmentation method(s) to apply
             - prct      : the probability to apply each transformation (between [0., 1.])
             - kwargs    : kwargs passed to each transformation function
@@ -65,8 +63,8 @@ def augment_image(image, method, prct = 0.25, ** kwargs):
         
         fn = transform if callable(transform) else _image_augmentations_fn[transform]
         
-        image = tf.cond(
-            tf.random.uniform((), seed = kwargs.get('seed', None)) <= prct,
+        image = ops.cond(
+            ops.random.uniform((), seed = kwargs.get('seed', None)) <= prct,
             lambda: fn(image, ** kwargs),
             lambda: image
         )
@@ -74,18 +72,22 @@ def augment_image(image, method, prct = 0.25, ** kwargs):
 
 @image_augmentation_wrapper
 def flip_vertical(img, ** kwargs):
+    import tensorflow as tf
     return tf.image.flip_up_down(img)
 
 @image_augmentation_wrapper
 def flip_horizontal(img, ** kwargs):
+    import tensorflow as tf
     return tf.image.flip_left_right(img)
 
 @image_augmentation_wrapper
 def rot90(img, n = None, seed = None, ** kwargs):
+    import tensorflow as tf
     if n is None: n = tf.random.uniform((), minval = 0, maxval = 4, dtype = tf.int32, seed = seed)
     return tf.image.rot90(img, n)
 
 def zoom(img, min_factor = 0.8, ** kwargs):
+    import tensorflow as tf
     scales = list(np.arange(0.8, 1.0, 0.01))
     boxes = np.zeros((len(scales), 4))
     
@@ -102,28 +104,34 @@ def zoom(img, min_factor = 0.8, ** kwargs):
 
 @image_augmentation_wrapper
 def noise(img, noise_factor = 1. / 25., clip = True, seed = None, ** kwargs):
+    import tensorflow as tf
     noise = tf.random.normal(tf.shape(img), seed = seed) * noise_factor
     return tf.clip_by_value(img + noise, 0., 1.) if clip else img + noise
 
 @image_augmentation_wrapper
 def quality(img, min_jpeg_quality = 25, max_jpeg_quality = 75, seed = None, ** kwargs):
+    import tensorflow as tf
     return tf.image.random_jpeg_quality(img, min_jpeg_quality, max_jpeg_quality, seed = seed)
 
 @image_augmentation_wrapper
 def hue(img, max_hue_delta = 0.15, seed = None, ** kwargs):
+    import tensorflow as tf
     return tf.image.random_hue(img, max_hue_delta, seed = seed)
 
 @image_augmentation_wrapper
 def saturation(img, lower_saturation = 0.5, upper_saturation = 2., seed = None, ** kwargs):
+    import tensorflow as tf
     return tf.image.random_saturation(img, lower_saturation, upper_saturation, seed = seed)
 
 @image_augmentation_wrapper
 def brightness(img, max_brightness_delta = 0.15, clip = True, seed = None, ** kwargs):
+    import tensorflow as tf
     img = tf.image.random_brightness(img, max_brightness_delta, seed = seed)
     return tf.clip_by_value(img, 0., 1.) if clip else img
 
 @image_augmentation_wrapper
 def contrast(img, lower_contrast = 0.5, upper_contrast = 1.5, clip = True, seed = None, ** kwargs):
+    import tensorflow as tf
     img = tf.image.random_contrast(img, lower_contrast, upper_contrast, seed = seed)
     return tf.clip_by_value(img, 0., 1.) if clip else img
 
@@ -137,6 +145,7 @@ def color(img, ** kwargs):
 
 @image_augmentation_wrapper
 def random_resize(img, min_scale = 0.5, max_scale = 2., seed = None, ** kwargs):
+    import tensorflow as tf
     factors = tf.random.uniform((2, ), min_scale, max_scale, dtype = tf.float32, seed = seed)
     
     target_shape = tf.cast(tf.shape(img)[-3 : -1], tf.float32)
@@ -151,6 +160,8 @@ def random_rotate(img, min_angle = -45., max_angle = 45., seed = None, ** kwargs
     return rotate_image(img, angle, ** kwargs)
 
 def augment_box(box, min_factor = 0.95, max_factor = 1.2, ** kwargs):
+    import tensorflow as tf
+    
     x, y, w, h = tf.unstack(tf.cast(box, tf.float32), axis = -1, num = 4)
     
     factor_x = tf.random.uniform((), min_factor, max_factor, dtype = tf.float32)

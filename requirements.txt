@@ -9,12 +9,11 @@ num2words
 numpy
 opencv_python
 pandas
-pdfminer.six
 pydot
 pydub
-python_docx
 regex
 requests
-tensorflow==2.10.0
+sounddevice
 tqdm
 umap_learn
+keras

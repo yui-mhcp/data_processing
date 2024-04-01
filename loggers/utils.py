@@ -1,6 +1,5 @@
-
-# Copyright (C) 2022 yui-mhcp project's author. All rights reserved.
-# Licenced under the Affero GPL v3 Licence (the "Licence").
+# Copyright (C) 2022-now yui-mhcp project author. All rights reserved.
+# Licenced under a modified Affero GPL v3 Licence (the "Licence").
 # you may not use this file except in compliance with the License.
 # See the "LICENCE" file at the root of the directory for the licence information.
 #
@@ -10,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
 import logging
 import inspect
 import functools
@@ -30,6 +30,7 @@ class ContextManager:
 def time_to_string(seconds):
     """ Returns a string representation of a time (given in seconds) """
     if seconds < 0.001: return '{} \u03BCs'.format(int(seconds * 1000000))
+    if seconds < 0.01:  return '{:.3f} ms'.format(seconds * 1000)
     if seconds < 1.:    return '{} ms'.format(int(seconds * 1000))
     h = int(seconds // 3600)
     m = int((seconds % 3600) // 60)
@@ -40,6 +41,12 @@ def time_to_string(seconds):
         '' if m == 0 else '{}min '.format(m),
         '{:.3f} sec'.format(s) if m + h == 0 else '{}sec'.format(int(s))
     )
+
+def executing_eagerly():
+    if 'tensorflow' in sys.modules:
+        import tensorflow as tf
+        return tf.executing_eagerly()
+    return True
 
 def get_object(objects, obj, * args, print_name = 'object', err = False, types = None, ** kwargs):
     """

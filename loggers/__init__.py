@@ -1,6 +1,5 @@
-
-# Copyright (C) 2022 yui-mhcp project's author. All rights reserved.
-# Licenced under the Affero GPL v3 Licence (the "Licence").
+# Copyright (C) 2022-now yui-mhcp project author. All rights reserved.
+# Licenced under a modified Affero GPL v3 Licence (the "Licence").
 # you may not use this file except in compliance with the License.
 # See the "LICENCE" file at the root of the directory for the licence information.
 #
@@ -16,13 +15,14 @@ import logging
 
 from logging.handlers import SMTPHandler
 
-from loggers.time_logging import TIME_LEVEL, TIME_DEBUG_LEVEL, timer, time_logger
-from loggers.telegram_handler import TelegramHandler
-from loggers.utils import get_object, partial
+from .time_logging import TIME_LEVEL, TIME_DEBUG_LEVEL, timer, time_logger
+from .telegram_handler import TelegramHandler
+from .utils import get_object, partial
 
 logger  = logging.getLogger(__name__)
 
 DEV     = 11
+RETRACING_LEVEL = 18
 
 _styles = {
     'basic' : '{message}',
@@ -75,6 +75,8 @@ def add_level(value, name):
     _levels[name] = value
 
     logging.addLevelName(value, name.upper())
+    if not hasattr(logging, name.upper()):
+        setattr(logging, name.upper(), value)
     if not hasattr(logging, name):
         setattr(logging, name, partial(logging.log, value))
     if not hasattr(logging.Logger, name):
@@ -155,3 +157,4 @@ _handlers   = {
 add_level(DEV, 'DEV')
 add_level(TIME_LEVEL, 'TIME')
 add_level(TIME_DEBUG_LEVEL, 'TIME_DEBUG')
+add_level(RETRACING_LEVEL, 'RETRACING')
