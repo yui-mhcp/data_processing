@@ -1,5 +1,5 @@
-# Copyright (C) 2022-now yui-mhcp project's author. All rights reserved.
-# Licenced under the Affero GPL v3 Licence (the "Licence").
+# Copyright (C) 2022-now yui-mhcp project author. All rights reserved.
+# Licenced under a modified Affero GPL v3 Licence (the "Licence").
 # you may not use this file except in compliance with the License.
 # See the "LICENCE" file at the root of the directory for the licence information.
 #
@@ -65,7 +65,7 @@ def prepare_dataset(data,
     
     import tensorflow as tf
     
-    if shuffle_size is None:        shuffle_size = tf.data.AUTOTUNE
+    if shuffle_size is None:        shuffle_size = tf.data.experimental.cardinality(dataset)
     if prefetch_size is None:       prefetch_size = tf.data.AUTOTUNE
     if num_parallel_calls is None:  num_parallel_calls = tf.data.AUTOTUNE
     logger.debug("Original dataset : {}".format(dataset))
@@ -144,19 +144,19 @@ def build_tf_dataset(data, as_dict = True, is_rectangular = True, siamese = Fals
     if isinstance(data, tf.data.Dataset): 
         dataset = data
     elif isinstance(data, (list, tuple, dict, np.ndarray)):
-        dataset = tf.data.Dataset.from_tensor_slices(data, ** kwargs)
+        dataset = tf.data.Dataset.from_tensor_slices(data)
     elif isinstance(data, np.ndarray):
-        dataset = tf.data.Dataset.from_tensor_slices(data, ** kwargs)
+        dataset = tf.data.Dataset.from_tensor_slices(data)
     elif isinstance(data, pd.DataFrame):
         if siamese:
             dataset = build_siamese_dataset(data, ** kwargs)
         elif as_dict:
             if is_rectangular:
-                dataset = tf.data.Dataset.from_tensor_slices(data.to_dict('list'), ** kwargs)
+                dataset = tf.data.Dataset.from_tensor_slices(data.to_dict('list'))
             else:
                 dataset = tf.data.experimental.from_list(data.to_dict('records'))
         else:
-            dataset = tf.data.Dataset.from_tensor_slices(data.values, ** kwargs)
+            dataset = tf.data.Dataset.from_tensor_slices(data.values)
     elif isinstance(data, str):
         if os.path.isdir(data):
             dataset = tf.data.Dataset.list_files(data + '/*')
@@ -171,7 +171,7 @@ def build_tf_dataset(data, as_dict = True, is_rectangular = True, siamese = Fals
         
         from keras.src.trainers.data_adapter import get_data_adapter
         
-        dataset = get_data_adapter(data, ** kwargs).get_tf_dataset()
+        dataset = get_data_adapter(data).get_tf_dataset()
         
     return dataset
 

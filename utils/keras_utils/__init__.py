@@ -9,5 +9,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import keras
+import logging
+
+from . import ops
 from .compile import *
 from .gpu_utils import *
+
+logger = logging.getLogger(__name__)
+
+def show_version():
+    logger.info('Keras version : {} - backend ({}) : {}'.format(
+        keras.__version__, ops.get_backend(), ops.get_backend_module().__version__
+    ))

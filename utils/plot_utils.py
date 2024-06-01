@@ -113,7 +113,7 @@ def _normalize_colors(colors, cmap = None):
     return colors
 
 def _plot_lines(ax, lines, config, default_color, vertical, cmap = None):
-    if lines is None: return
+    if lines is None: return []
     _drawing_method = getattr(ax, 'axvline' if vertical else 'axhline')
     
     config = config.copy()
@@ -123,6 +123,7 @@ def _plot_lines(ax, lines, config, default_color, vertical, cmap = None):
     
     if not isinstance(lines, dict): lines = {None : lines}
 
+    _labels = []
     for label, lines in lines.items():
         if not isinstance(lines, _data_iterable): lines = [lines]
         lines_config = config if not label else {
@@ -130,11 +131,14 @@ def _plot_lines(ax, lines, config, default_color, vertical, cmap = None):
         }
         if 'color' in lines_config:
             lines_config['color'] = _normalize_colors(lines_config['color'], cmap)
+        
+        if label: _labels.append(label)
         for i, line in enumerate(lines):
             if label: config['label'] = label if i == 0 else None
             _drawing_method(
                 line, ** {k : _get_label_config(label, i, v) for k, v in lines_config.items()}
             )
+        return _labels
 
 def _set_boxplot_colors(im, colors, facecolor, cmap = None):
     colors = _normalize_colors(colors, cmap = cmap) if isinstance(colors, _data_iterable) else [colors] * len(im['boxes'])
@@ -232,6 +236,7 @@ def plot(x, y = None, * args, ax = None, figsize = None, xlim = None, ylim = Non
     def _plot(ax, p_type, datas, ** kwargs):
         """ Calls the plotting function `p_type` on `ax` with `datas` and `kwargs` """
         try:
+            if 'label' in kwargs: _labels.append(kwargs['label'])
             return getattr(ax, p_type)(* datas, ** kwargs)
         except Exception as e:
             logger.error('Error while calling `{}.{}` with data {}\n  Config : {}'.format(
@@ -246,6 +251,7 @@ def plot(x, y = None, * args, ax = None, figsize = None, xlim = None, ylim = Non
             config = legend_kwargs.copy()
             config.setdefault('facecolor', facecolor)
             legend_fontcolor = config.pop('fontcolor', fontcolor)
+            config.setdefault('ncols', int(math.ceil(len(_labels) / 5.)))
             
             leg = ax.legend(fontsize = legend_fontsize, ** config)
             if 'title' in config:        leg.get_title().set_color(legend_fontcolor)
@@ -406,6 +412,8 @@ def plot(x, y = None, * args, ax = None, figsize = None, xlim = None, ylim = Non
         plt.gcf().autofmt_xdate()
     
     
+    _labels = []
+    
     im = None
     if isinstance(y, dict):
         if len(y) > 0: kwargs.pop('color', None)
@@ -423,18 +431,14 @@ def plot(x, y = None, * args, ax = None, figsize = None, xlim = None, ylim = Non
     else:
         im = _plot_data(ax, x, y, kwargs)
     
-    _plot_lines(
+    _labels.extend(_plot_lines(
         ax, hlines, hlines_kwargs, color, vertical = False, cmap = kwargs.get('cmap', None)
-    )
-    _plot_lines(
+    ))
+    _labels.extend(_plot_lines(
         ax, vlines, vlines_kwargs, color, vertical = True, cmap = kwargs.get('cmap', None)
-    )
+    ))
     
-    if (
-        isinstance(y, dict)
-        or (isinstance(vlines, dict) and any(k for k in vlines))
-        or (isinstance(hlines, dict) and any(k for k in hlines))):
-        _maybe_add_legend()
+    if len(_labels) > 0: _maybe_add_legend()
     
     if with_colorbar and plot_type == 'imshow':
         cb = ax.figure.colorbar(im, orientation = orientation, ax = ax)

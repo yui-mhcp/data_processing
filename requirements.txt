@@ -4,7 +4,6 @@ graphviz
 imageio
 librosa
 matplotlib
-noisereduce
 num2words
 numpy
 opencv_python

@@ -17,7 +17,7 @@ from loggers import timer
 from utils import pad_to_multiple
 from utils.keras_utils import TensorSpec, ops, graph_compile
 from utils.wrapper_utils import dispatch_wrapper
-from .iou import compute_iou
+from .metrics import compute_iou
 from .converter import BoxFormat, NORMALIZE_RELATIVE, box_converter_wrapper
 
 _nms_methods    = {}

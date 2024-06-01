@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from utils.text.text_processing import split_text
+from ..text_processing import split_text
 
 def clean_paragraphs(document):
     """ Cleans `document` by stripping paragraph texts and removing empty ones """

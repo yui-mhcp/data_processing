@@ -10,6 +10,8 @@
 # limitations under the License.
 
 import os
+import re
+import glob
 import json
 import pickle
 import logging
@@ -39,6 +41,19 @@ def path_to_unix(path):
     """ Simply replaces '\' to '/' :D """
     if not isinstance(path, str): return path
     return path.replace('\\', '/')
+
+def sort_files(filenames):
+    if isinstance(filenames, str):
+        if os.path.isdir(filenames):
+            return sort_files([os.path.join(filenames, f) for f in os.listdir(filenames)])
+        return [filenames]
+    return sorted(filenames, key = lambda f: (len(f), f))
+
+def get_files(file_format, sort = False):
+    if '{' not in file_format: return file_format
+    results = glob.glob(re.sub(r'\{.*\}', r'*', file_format))
+    if sort: results = sort_files(results)
+    return results
 
 def normalize_filename(filename,
                        keys = 'filename',

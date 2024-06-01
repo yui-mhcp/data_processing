@@ -9,9 +9,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import importlib
-
-for module in os.listdir(__path__[0]):
-    if module.startswith(('_', '.')) or '_old' in module: continue
-    importlib.import_module(__package__ + '.' + module.replace('.py', ''))
+from .generic_utils import *
+from .wrapper_utils import *

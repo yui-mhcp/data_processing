@@ -1,5 +1,5 @@
-# Copyright (C) 2022-now yui-mhcp project's author. All rights reserved.
-# Licenced under the Affero GPL v3 Licence (the "Licence").
+# Copyright (C) 2022-now yui-mhcp project author. All rights reserved.
+# Licenced under a modified Affero GPL v3 Licence (the "Licence").
 # you may not use this file except in compliance with the License.
 # See the "LICENCE" file at the root of the directory for the licence information.
 #
@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 
 from functools import wraps
+from multiprocessing import cpu_count
 
 from loggers import timer
 from .. import add_dataset, maybe_load_embedding
@@ -32,7 +33,7 @@ def image_dataset_wrapper(name, task, ** default_config):
                 
                 - (optional) text   : the image caption(s)
         """
-        @timer(name = '{} loading'.format(name))
+        @timer(name = '{} loading'.format(name if isinstance(name, str) else name[0]))
         @wraps(dataset_loader)
         def _load_and_process(directory,
                               * args,
@@ -64,8 +65,8 @@ def image_dataset_wrapper(name, task, ** default_config):
                 {'filename' : file, ** row} for file, row in dataset.items()
             ]
             
-            if add_image_size and 'width' not in dataset[0]:
-                dataset = _add_image_size(dataset)
+            if (add_image_size or combine_box_lines) and 'width' not in dataset[0]:
+                dataset = _add_image_size(dataset, tqdm = kwargs.get('tqdm', lambda x: x))
             
             if 'label' in dataset[0]:
                 dataset = _replace_labels(dataset, labels_subtitutes)
@@ -121,13 +122,12 @@ def image_dataset_wrapper(name, task, ** default_config):
         return _load_and_process
     return wrapper
 
-def _add_image_size(dataset):
+def _add_image_size(dataset, tqdm = None):
     from utils.image import get_image_size
-    cons = Consumer(get_image_size, max_workers = cpu_count()).start()
-    sizes = cons.extend_and_wait([row['filename'] for row in dataset], stop = True)
     
-    for row, (h, w) in zip(dataset, sizes):
-        row.update({'height' : h, 'width' : w})
+    for row in tqdm(dataset):
+        image_h, image_w = get_image_size(row['filename'])
+        row.update({'height' : image_h, 'width' : image_w})
     
     return dataset
 
@@ -193,22 +193,24 @@ def _pad_boxes(dataset):
             if 'label' in row: row['label'].extend([''] * (n - row['nb_box']))
     return dataset
 
-def _combine_text_lines(dataset, keep_original = True, ** kwargs):
-    from utils.image import get_image_size
+def _combine_text_lines(dataset, keep_original = True, tqdm = lambda x: x, ** kwargs):
     from utils.image.bounding_box import NORMALIZE_WH, BoxFormat, convert_box_format, combine_boxes_horizontal
     
     new_data = [] if not keep_original else dataset
-    for row in dataset:
+    for row in tqdm(dataset):
         if len(row['label']) == 1:
             if not keep_original: new_data.append(row)
             continue
 
-        image_h, image_w = get_image_size(row['filename'])
+        image_h, image_w = row['height'], row['width']
         boxes, indices, _ = combine_boxes_horizontal(
-            row[BOX_KEY], image_h = image_h, image_w = image_w, ** kwargs
+            row['boxes'], image_h = image_h, image_w = image_w, ** kwargs
         )
 
-        comb_texts = [' '.join([row['label'][idx] for idx in comb_index]) for comb_index in indices]
+        comb_texts = [
+            ' '.join([row['label'][idx] for idx in comb_index])
+            for comb_index in indices
+        ]
         
         if keep_original:
             boxes       = boxes[[i for i, idx in enumerate(indices) if len(idx) > 1]]
@@ -217,10 +219,14 @@ def _combine_text_lines(dataset, keep_original = True, ** kwargs):
         if len(boxes) == 0: continue
         
         boxes   = convert_box_format(
-            boxes, BoxFormat.XYWH, box_mode = BoxFormat.CORNERS,
-            image_h = image_h, image_w = image_w, normalize_mode = NORMALIZE_WH
+            boxes,
+            target  = BoxFormat.XYWH,
+            source  = BoxFormat.CORNERS,
+            image_h = image_h,
+            image_w = image_w,
+            normalize_mode = NORMALIZE_WH
         )
-        new_data.append({** row, BOX_KEY : boxes, 'label' : comb_texts})
+        new_data.append({** row, 'boxes' : boxes, 'label' : comb_texts})
     
     return new_data
 

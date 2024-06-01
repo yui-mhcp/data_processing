@@ -129,8 +129,8 @@ def compare_list(target, value, nested_test = False, ** kwargs):
     cmp         = [is_equal(it1, it2, ** kwargs) for it1, it2 in zip(target, value)]
     invalids    = [(i, msg) for i, (eq, msg) in enumerate(cmp) if not eq]
 
-    assert len(invalids) == 0, "Invalid items ({}) :{}{}".format(
-        len(invalids), '\n' if len(invalids) > 1 else ' ',
+    assert len(invalids) == 0, "Invalid items ({}/{}) :{}{}".format(
+        len(invalids), len(target), '\n' if len(invalids) > 1 else ' ',
         '\n'.join(['Item #{} : {}'.format(i, msg) for i, msg in invalids])
     )
     
@@ -164,8 +164,8 @@ def compare_dict(target, value, keys = None, skip_keys = None, skip_missing_keys
     cmp         = {k : is_equal(target[k], value[k], ** kwargs) for k in target}
     invalids    = {k : msg for k, (eq, msg) in cmp.items() if not eq}
     
-    assert len(invalids) == 0, "Invalid items ({}) :{}{}".format(
-        len(invalids), '\n' if len(invalids) > 1 else ' ',
+    assert len(invalids) == 0, "Invalid items ({}/{}) :{}{}".format(
+        len(invalids), len(target), '\n' if len(invalids) > 1 else ' ',
         '\n'.join(['Key {} : {}'.format(k, msg) for k, msg in invalids.items()])
     )
 

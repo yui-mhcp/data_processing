@@ -1,5 +1,5 @@
-# Copyright (C) 2022-now yui-mhcp project's author. All rights reserved.
-# Licenced under the Affero GPL v3 Licence (the "Licence").
+# Copyright (C) 2022-now yui-mhcp project author. All rights reserved.
+# Licenced under a modified Affero GPL v3 Licence (the "Licence").
 # you may not use this file except in compliance with the License.
 # See the "LICENCE" file at the root of the directory for the licence information.
 #
@@ -15,6 +15,7 @@ import time
 import keras
 import logging
 import numpy as np
+import pandas as pd
 
 from tqdm import tqdm
 
@@ -86,14 +87,20 @@ def benchmark_dataset(dataset, steps = 100, build = False, ** kwargs):
             
     return infos
 
+test_dataset_time = benchmark_dataset
+
 def _get_stats(x):
+    x = ops.convert_to_numpy(x)
     if ops.is_int(x):
         return 'shape : {} - min : {} - max : {}'.format(
             x.shape, np.min(x), np.max(x)
         )
-    return 'shape : {} - min : {:.3f} - max : {:.3f} - mean : {:.3f}'.format(
-        x.shape, np.min(x), np.max(x), np.mean(x)
-    )
+    elif ops.is_float(x):
+        return 'shape : {} - min : {:.3f} - max : {:.3f} - mean : {:.3f}'.format(
+            x.shape, np.min(x), np.max(x), np.mean(x)
+        )
+    else:
+        return 'shape : {}'.format(x.shape)
 
 def _summarize_column(col, limit, ** kwargs):
     if not isinstance(col.iloc[0], (str, int, float, np.integer, np.floating, list)): return {}

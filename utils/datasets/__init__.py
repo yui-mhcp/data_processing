@@ -1,5 +1,5 @@
-# Copyright (C) 2022-now yui-mhcp project's author. All rights reserved.
-# Licenced under the Affero GPL v3 Licence (the "Licence").
+# Copyright (C) 2022-now yui-mhcp project author. All rights reserved.
+# Licenced under a modified Affero GPL v3 Licence (the "Licence").
 # you may not use this file except in compliance with the License.
 # See the "LICENCE" file at the root of the directory for the licence information.
 #
@@ -19,27 +19,27 @@ from .summary import *
 from .custom_datasets import set_dataset_dir, get_dataset_dir, is_custom_dataset, load_custom_dataset, show_custom_datasets
 
 @timer(name = 'dataset loading')
-def get_dataset(dataset_name, *, source = None, ** kwargs):
-    if isinstance(dataset_name, (list, tuple)):
-        if all(is_custom_dataset(ds) for ds in dataset_name):
-            return load_custom_dataset(dataset_name, ** kwargs)
-        return [get_dataset(ds, source = source, ** kwargs) for ds in dataset_name]
+def get_dataset(dataset, *, source = 'keras', ** kwargs):
+    if isinstance(dataset, (list, tuple)):
+        if all(is_custom_dataset(ds) for ds in dataset):
+            return load_custom_dataset(dataset, ** kwargs)
+        return [get_dataset(ds, source = source, ** kwargs) for ds in dataset]
     
-    elif isinstance(dataset_name, dict):
-        return [get_dataset(ds, ** config) for ds, config in dataset_name.items()]
+    elif isinstance(dataset, dict):
+        return [get_dataset(ds, ** config) for ds, config in dataset.items()]
     
-    if is_custom_dataset(dataset_name) or source == 'custom':
-        dataset = load_custom_dataset(ds_name, ** kwargs)
+    if is_custom_dataset(dataset) or source == 'custom':
+        dataset = load_custom_dataset(dataset, ** kwargs)
     elif source in ('tensorflow', 'tensorflow_datasets', 'tf', 'tfds'):
         import tensorflow_datasets as tfds
         
-        dataset = tfds.load(dataset_name, ** kwargs)
-    elif source == 'keras' and dataset_name in _keras_datasets:
-        dataset = _keras_datasets[dataset_name](** kwargs)
+        dataset = tfds.load(dataset, ** kwargs)
+    elif source == 'keras' and dataset in _keras_datasets:
+        dataset = _keras_datasets[dataset](** kwargs)
     elif callable(source):
-        dataset = source(dataset_name, ** kwargs)
+        dataset = source(dataset, ** kwargs)
     else:
-        raise ValueError("Dataset {} and source {} are not supported !".format(dataset_name, source))
+        raise ValueError("Dataset {} and source {} are not supported !".format(dataset, source))
     
     return dataset
 
@@ -48,5 +48,7 @@ def print_datasets():
     print_objects(_keras_datasets, 'keras datasets')
 
 _keras_datasets = {
-    k : getattr(v, 'load_data') for k, v in import_objects(keras.datasets).items()
+    k : getattr(v, 'load_data')
+    for k, v in import_objects(keras.datasets, allow_modules = True).items()
+    if hasattr(v, 'load_data')
 }

@@ -23,7 +23,7 @@ import numpy as np
 import pandas as pd
 
 from loggers import timer, time_logger
-from utils.keras_utils import ops, graph_compile
+from utils.keras_utils import TensorSpec, ops, graph_compile
 from utils import Producer, Consumer, time_to_string
 from utils.image.image_utils import resize_image
 
@@ -66,8 +66,10 @@ def get_image_size(image):
         raise ValueError("Unknown image type : {}\n{}".format(type(image), image))
     
 @timer
-@graph_compile(support_xla = False, cast_kwargs = False)
-def load_image(filename,
+@graph_compile(
+    support_xla = False, cast_kwargs = False, follow_type_hints = None, force_tensorflow = True
+)
+def load_image(filename : TensorSpec(),
 
                channels = 3,
                mode     = None,
@@ -105,7 +107,7 @@ def load_image(filename,
     # Convert filename to a Tensor (if necessary)
     # Note : inferring the output type then use `tf.cast` is faster than `tf.convert_to_tensor` and allows some type checking
     if ops.is_string(filename):
-        if ops.is_tensorflow_backend() or not ops.executing_eagerly():
+        if ops.is_tensorflow_backend() or ops.is_tensorflow_graph():
             import tensorflow as tf
             
             image = tf.io.read_file(filename)
@@ -116,28 +118,27 @@ def load_image(filename,
     else:
         image = filename
         if to_tensor: image = ops.convert_to_tensor(image)
+        if len(ops.shape(image)) == 2: image = image[:, :, None]
 
     if boxes is not None:
         from utils.image.bounding_box import crop_box
         _, image = crop_box(image, boxes, ** kwargs)
     
-    if mode == 'gray' and image.shape[2] == 3:
-        import tensorflow as tf
-        image = tf.image.rgb_to_grayscale(image)
-    elif mode == 'rgb' and image.shape[2] == 1:
-        import tensorflow as tf
-        image = tf.image.grayscale_to_rgb(image)
-
     if dtype is not None:
         image = ops.convert_data_dtype(image, dtype = dtype)
 
+    if mode == 'gray' and image.shape[2] == 3:
+        image = ops.rgb_to_grayscale(image)
+    elif mode == 'rgb' and image.shape[2] == 1:
+        image = ops.grayscale_to_rgb(image)
+
     if any(kwargs.get(k, None) is not None for k in _resize_kwargs):
-        image = resize_image(image, ** {k : v for k, v in kwargs.items() if k in _resize_kwargs})
+        image = resize_image(image, ** kwargs)
         if (isinstance(kwargs.get('target_shape', None), tuple)
             and all(s != -1 for s in kwargs['target_shape'])
             and not ops.executing_eagerly()
            ):
-            image = ops.ensure_shape(image, kwargs['target_shape'] + (image.shape[-1],))
+            image = ops.ensure_shape(image, kwargs['target_shape'][:2] + (image.shape[-1],))
 
     return image
 

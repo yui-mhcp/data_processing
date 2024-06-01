@@ -15,17 +15,6 @@ import inspect
 import functools
 
 logger = logging.getLogger(__name__)
-
-class ContextManager:
-    def __init__(self, enter = None, exit = None):
-        self.enter  = enter
-        self.exit   = exit
-    
-    def __enter__(self):
-        return self.enter() if self.enter is not None else None
-    
-    def __exit__(self, * args):
-        return self.exit(* args) if self.exit is not None else None
         
 def time_to_string(seconds):
     """ Returns a string representation of a time (given in seconds) """
@@ -43,10 +32,46 @@ def time_to_string(seconds):
     )
 
 def executing_eagerly():
+    """ This function is equivalent to `tf.executing_eagerly`, while not importing tensorflow by default, removing this heavy dependency if it is not required """
     if 'tensorflow' in sys.modules:
         import tensorflow as tf
         return tf.executing_eagerly()
     return True
+
+def get_args(fn, include_args = True, ** kwargs):
+    """ Returns a `list` of the positional argument names (even if they have default values) """
+    kinds = (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
+    if include_args: kinds += (inspect.Parameter.VAR_POSITIONAL, )
+    return [
+        name for name, param in inspect.signature(fn, ** kwargs).parameters.items()
+        if param.kind in kinds
+    ]
+
+def get_kwargs(fn, ** kwargs):
+    """ Returns a `dict` containing the kwargs of `fn` """
+    return {
+        name : param.default for name, param in inspect.signature(fn, ** kwargs).parameters.items()
+        if param.default is not inspect._empty
+    }
+
+def has_args(fn, ** kwargs):
+    return any(
+        param.kind == inspect.Parameter.VAR_POSITIONAL
+        for param in inspect.signature(fn, ** kwargs).parameters.values()
+    )
+
+def has_kwargs(fn, ** kwargs):
+    return any(
+        param.kind == inspect.Parameter.VAR_KEYWORD
+        for param in inspect.signature(fn, ** kwargs).parameters.values()
+    )
+
+def signature_to_str(fn, add_doc = False, ** kwargs):
+    return '{}{}{}'.format(
+        fn.__name__,
+        str(inspect.signature(fn, ** kwargs)),
+        '\n{}'.format(fn.__doc__) if add_doc else ''
+    )
 
 def get_object(objects, obj, * args, print_name = 'object', err = False, types = None, ** kwargs):
     """
@@ -95,65 +120,3 @@ def get_object(objects, obj, * args, print_name = 'object', err = False, types =
 def to_lower_keys(dico):
     return {k.lower() : v for k, v in dico.items()}
 
-def partial(fn = None, * partial_args, _force = False, ** partial_config):
-    """
-        Wraps `fn` with default args or kwargs. It acts similarly to `functools.wraps` but gives cleaner doc information
-        The major difference with `functools.partial` is that it supports class methods !
-        
-        Arguments :
-            - fn    : the function to call
-            - * partial_args    : values for the first positional arguments
-            - _force    : whether to force kwargs `partial_config` or not
-            - ** partial_config : new default values for keyword arguments
-        Return :
-            - wrapped function (if `fn`) or a decorator
-        
-        Note that partial positional arguments are only usable in the non-decorator mode (which is also the case in `functools.partial`)
-        
-        /!\ IMPORTANT : the below examples can be executed with `functools.partial` and will give the exact same behavior
-        
-        Example :
-        ```python
-        @partial(b = 3)
-        def foo(a, b = 2):
-            return a ** b
-        
-        print(foo(2))   # displays 8 as `b`'s default value is now 3
-        
-        # In this case, the `a` parameter is forced to be 2 and will be treated as a constant value
-        # passing positional arguments to `partial` is a bit risky, but it can be useful in some scenario if you want to *remove* some parameters and fix them to a constant
-        # Example : `logging.dev = partial(logging.log, DEV)` --> `logging.dev('message')`
-        # Example : `logging.Logger.dev = partial(logging.Logger.log, DEV)`
-        # --> `logging.getLogger(__name__).dev('message')` This will not work with functools.partial
-        foo2 = partial(foo, 2)
-
-        print(foo2())   # displays 8 as `a`'s value has been set to 2
-        print(foo2(b = 4)) # displays 16
-        print(foo2(4))  # raises an exception because `b` is given as positional arguments (4) and keyword argument (3)
-        
-        # In this case, foo3 **must** be called with kwargs, otherwise it will raise an exception
-        foo3 = partial(a = 2, b = 2)
-        ```
-    """
-    def wrapper(fn):
-        @functools.wraps(fn)
-        def inner(* args, ** kwargs):
-            if not add_self_first:
-                args    = partial_args + args
-            else:
-                args    = args[:1] + partial_args + args[1:]
-            kwargs  = {** kwargs, ** partial_config} if _force else {** partial_config, ** kwargs}
-            return fn(* args, ** kwargs)
-        
-        inner.__doc__ = '{}{}{}'.format(
-            '' if not partial_args else 'partial args : {} '.format(partial_args),
-            '' if not partial_config else 'partial config : {}'.format(partial_config),
-            '\n{}'.format(inner.__doc__) if inner.__doc__ else ''
-        ).capitalize()
-        
-        fn_arg_names    = inspect.getfullargspec(fn).args
-        add_self_first  = fn_arg_names and fn_arg_names[0] == 'self'
-        
-        return inner
-    
-    return wrapper if fn is None else wrapper(fn)

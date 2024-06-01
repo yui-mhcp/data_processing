@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from utils.text.document_parser import parse_document
+from .parser import parse_document
 
 @parse_document.dispatch(('txt', 'md'))
 def parse_txt(filename, encoding = 'utf-8', paragraph_sep = '\n\n', ** kwargs):

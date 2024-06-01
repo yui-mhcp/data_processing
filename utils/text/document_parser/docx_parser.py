@@ -12,7 +12,7 @@
 import os
 import logging
 
-from utils.text.document_parser.parser import parse_document
+from .parser import parse_document
 
 logger = logging.getLogger(__name__)
 

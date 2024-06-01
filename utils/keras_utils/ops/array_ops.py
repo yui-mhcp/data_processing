@@ -20,6 +20,10 @@ from functools import cache
 from loggers import timer
 from .ops_builder import build_op, build_custom_op, executing_eagerly
 
+class TensorflowNotAvailable(Exception):
+    def __init__(self):
+        super().__init__('Tensorflow is not available')
+
 """
 Functions to convert `Tensor` to `np.ndarray` and vice-versa, and create `Tensor`
 """
@@ -49,6 +53,26 @@ def convert_to_numpy(x, dtype = None):
     
     return x if dtype is None else cast(x, dtype)
 
+def get_convertion_dtype(x):
+    if is_tensor(x): return dtype_to_str(x.dtype)
+    elif isinstance(x, (list, tuple)):
+        if len(x) == 0: return 'float32'
+        data = tree.flatten(x)[0]
+    else:
+        data = x
+    
+    if isinstance(data, str) or (isinstance(data, np.ndarray) and data.dtype == object):
+        return 'string'
+    elif is_bool(data):     return 'bool'
+    elif is_float(data):    return 'float32'
+    elif isinstance(data, int): return 'int32'
+    elif hasattr(data, 'dtype'):
+        _dtype = dtype_to_str(data.dtype)
+        if _dtype[0] == 'u':    return _dtype
+        elif 'int' in _dtype:   return 'int32'
+        else: raise ValueError('Unknown data dtype : {}'.format(data.dtype))
+    else: raise ValueError('Unknown data type : {}\n{}'.format(type(data), data))
+
 @timer(debug = True)
 def convert_to_tensor(x, dtype = None):
     """
@@ -71,30 +95,30 @@ def convert_to_tensor(x, dtype = None):
     
     elif x is None or is_tensor(x): return x
     elif isinstance(x, dict): return {k : convert_to_tensor(v) for k, v in x.items()}
-    elif isinstance(x, (list, tuple)):
-        if len(x) == 0: return zeros((), dtype = 'float32')
-        data = tree.flatten(x)[0]
-    else:
-        data = x
     
-    if isinstance(data, str) or (isinstance(data, np.ndarray) and data.dtype == object):
-        if not is_tensorflow_backend():
-            raise RuntimeError('The `string` type is only supported in `tensorflow` backend')
+    return convert_to_tensor_op(x, get_convertion_dtype(x))
+
+def convert_to_tf_tensor(x, dtype = None):
+    try:
         import tensorflow as tf
-        return tf.as_string(data)
+    except ImportError:
+        raise TensorflowNotAvailable()
     
-    if isinstance(data, bool):      conv_dtype = 'bool'
-    elif isinstance(data, int):     conv_dtype = 'int32'
-    elif isinstance(data, float):   conv_dtype = 'float32'
-    elif isinstance(data, np.ndarray):
-        if np.issubdtype(data.dtype, np.floating):  conv_dtype = 'float32'
-        elif data.dtype == bool:                    conv_dtype = 'bool'
-        elif data.dtype == np.uint8:                conv_dtype = 'uint8'
-        elif np.issubdtype(data.dtype, np.integer): conv_dtype = 'int32'
-        else: raise ValueError('Unknown data dtype : {}'.format(data.dtype))
-    else: raise ValueError('Unknown data type : {}\n{}'.format(type(data), data))
+    if dtype is not None:
+        if not tf.is_tensor(x):
+            if is_tensor(x): x = convert_to_numpy(x)
+            return tf.convert_to_tensor(x, dtype_to_str(dtype))
+        elif dtype == 'float' and is_float(x):
+            return x
+        else:
+            return tf.cast(x, dtype)
     
-    return convert_to_tensor_op(x, conv_dtype)
+    elif x is None or tf.is_tensor(x): return x
+    elif isinstance(x, dict): return {k : convert_to_tf_tensor(v) for k, v in x.items()}
+    
+    dtype = get_convertion_dtype(x)
+    if is_tensor(x): x = convert_to_numpy(x)
+    return tf.convert_to_tensor(x, dtype)
 
 def _tf_array(* args, dtype = None, ** kwargs):
     import tensorflow as tf
@@ -130,7 +154,12 @@ Functions to convert `Tensor` types
 def dtype_to_str(dtype):
     if isinstance(dtype, str):
         return dtype if dtype != 'float' else keras.backend.floatx()
-    return keras.backend.standardize_dtype(dtype)
+    elif hasattr(dtype, 'name'):
+        return dtype.name
+    try:
+        return keras.backend.standardize_dtype(dtype)
+    except ValueError:
+        return str(dtype)
 
 @timer(debug = True)
 def cast(x, dtype):

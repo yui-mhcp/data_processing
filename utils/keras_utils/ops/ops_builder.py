@@ -43,6 +43,9 @@ def get_backend_module():
     elif get_backend() == 'numpy':
         return np
 
+def get_backend_version():
+    return get_backend_module().__version__
+
 def is_tensorflow_graph():
     """
         This function is equivalent to `tf.executing_eagerly` while enabling to not import tensorflow by default
@@ -71,7 +74,7 @@ def set_xla_execution(use_xla):
     if is_tensorflow_backend(): return
     if use_xla: _is_executing_xla[_get_thread_id()] = True
     else:       _is_executing_xla.pop(_get_thread_id())
-
+        
 def build_op(k_op,
              tf_op = None,
              np_op = None,

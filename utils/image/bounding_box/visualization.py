@@ -45,11 +45,14 @@ def draw_boxes(image,
               ):
     if not isinstance(color, list): color = [color]
     if isinstance(shape, str):      shape = get_enum_item(shape, Shape)
-    if isinstance(image, str):      image = load_image(image, as_array = True)
+    if isinstance(image, str):      image = load_image(image)
     image   = ops.convert_to_numpy(image)
     image_h, image_w = image.shape[:2]
-    
-    color = [normalize_color(c, dtype = image.dtype.name).tolist() for c in color]
+
+    color = [
+        ops.convert_to_numpy(normalize_color(c, dtype = ops.dtype_to_str(image.dtype))).tolist()
+        for c in color
+    ]
 
     for i, (x1, y1, x2, y2) in enumerate(boxes['boxes'].tolist()):
         if x2 <= x1 or y2 <= y1: continue

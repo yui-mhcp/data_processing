@@ -13,7 +13,7 @@ import re
 import logging
 
 from loggers import timer, time_logger
-from utils.text.document_parser.parser import parse_document
+from .parser import parse_document
 
 logger = logging.getLogger(__name__)
 

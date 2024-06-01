@@ -9,17 +9,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from utils.audio.audio_search import AudioSearch, SearchResult
-from utils.audio.audio_annotation import *
-from utils.audio.audio_processing import *
-from utils.audio.audio_augmentation import *
+from .audio_search import AudioSearch, SearchResult
+from .audio_annotation import *
+from .audio_processing import *
+from .audio_augmentation import *
 
-from utils.audio.audio_io import *
-from utils.audio.audio_io import _load_fn, _write_fn
+from .audio_io import *
+from .audio_io import _load_fn, _write_fn
 
-from utils.audio.mkv_utils import process_mkv, parse_subtitles
+from .mkv_utils import process_mkv, parse_subtitles
 
-from utils.audio.stft import *
+from .stft import *
 
 _audio_formats = tuple(set(list(_load_fn.keys()) + list(_write_fn.keys())))
 

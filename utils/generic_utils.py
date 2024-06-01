@@ -157,27 +157,87 @@ def signature_to_str(fn, add_doc = False, ** kwargs):
         '\n{}'.format(fn.__doc__) if add_doc else ''
     )
 
-def import_objects(modules, filters = None, types = None, exclude = (), fn = None):
+def import_objects(modules,
+                   exclude  = (),
+                   filters  = None,
+                   classes  = None,
+                   types    = None,
+                   allow_modules    = False,
+                   allow_functions  = True,
+                   signature    = None,
+                   fn   = None
+                  ):
     if fn is None: fn = lambda v: v
-    if types is not None: filters = lambda name, val: isinstance(val, types)
-    elif filters is None: filters = lambda name, val: True
-    if isinstance(modules, str) and os.path.isdir(modules): modules = glob.glob(modules + '/*.py')
-    elif not isinstance(modules, list): modules = [modules]
-    if isinstance(exclude, str):        exclude = [exclude]
+    def is_valid(name, val, module):
+        if not hasattr(val, '__module__'):
+            if not allow_modules or not val.__package__.startswith(module): return False
+            return True
 
-    objects = {}
+        if filters is not None and not filters(name, val): return False
+        if not isinstance(val, type):
+            if types is not None and isinstance(val, types): return True
+            
+            if not val.__module__.startswith(module): return False
+            if allow_functions and callable(val):
+                if signature:
+                    return get_args(val)[:len(signature)] == signature
+                return True
+            return False
+        if not val.__module__.startswith(module): return False
+        if classes is not None and not issubclass(val, classes):
+            return False
+        return True
+            
+    if types is not None:
+        if not isinstance(types, (list, tuple)): types = (types, )
+        if type in types: allow_functions = False
+    
+    if signature: signature = list(signature)
+    if isinstance(exclude, str):        exclude = [exclude]
+    if not isinstance(modules, list): modules = [modules]
+    
+    all_modules = []
     for module in modules:
         if isinstance(module, str):
+            all_modules.extend(_expand_path(module))
+        else:
+            all_modules.append(module)
+
+    objects = {}
+    for module in all_modules:
+        if isinstance(module, str):
             if module.endswith(('__init__.py', '_old.py')): continue
-            module = importlib.import_module(module.replace(os.path.sep, '.')[:-3])
+            elif os.path.basename(module).startswith(('.', '_')): continue
+            try:
+                module = module.replace(os.path.sep, '.')[:-3]
+                module = importlib.import_module(module)
+            except Exception as e:
+                logger.debug('Import of module {} failed due to {}'.format(module, str(e)))
+                continue
         
+        root_module = module.__name__.split('.')[0]
         objects.update({
-            k : fn(v) for k, v in vars(module).items()
-            if not k.startswith('_') and not k in exclude and filters(k, v)
+            k : fn(v) for k, v in vars(module).items() if (
+                (hasattr(v, '__module__') or hasattr(v, '__package__'))
+                and not k.startswith('_')
+                and not k in exclude
+                and is_valid(k, v, root_module)
+            )
         })
     
     return objects
-    
+
+def _expand_path(path):
+    expanded = []
+    for f in os.listdir(path):
+        if f.startswith(('.', '_')): continue
+        f = os.path.join(path, f)
+        if os.path.isdir(f):
+            expanded.extend(_expand_path(f))
+        else:
+            expanded.append(f)
+    return expanded
+
 def print_objects(objects, print_name = 'objects', _logger = logger):
     """ Displays the list of available objects (i.e. simply prints `objects.keys()` :D ) """
     _logger.info("Available {} : {}".format(print_name, sorted(list(objects.keys()))))
@@ -221,7 +281,9 @@ def get_object(objects,
                 objects, n, * args, print_name = print_name,  err = err, types = types, ** kwargs
             ) for n, args in obj.items()]
         
-        obj, args, kwargs = obj['class_name'], (), obj.get('config', {})
+        obj, args, kwargs = obj['class_name'], (), obj.get(
+            'config', {k : v for k, v in obj.items() if k != 'class_name'}
+        )
     
     if isinstance(obj, str):
         _lower_objects = to_lower_keys(objects)
@@ -229,6 +291,12 @@ def get_object(objects,
             obj = objects[obj]
         elif obj.lower() in _lower_objects:
             obj = _lower_objects[obj.lower()]
+        elif ''.join([c for c in obj.lower() if c.isalnum()]) in _lower_objects:
+            obj = _lower_objects[''.join([c for c in obj.lower() if c.isalnum()])]
+        elif err:
+            raise ValueError("{} is not available !\n  Accepted : {}\n  Got : {}".format(
+                print_name, tuple(objects.keys()), obj
+            ))
     elif types is not None and isinstance(obj, types) or callable(obj):
         pass
     elif err:

@@ -13,7 +13,7 @@ import math
 import logging
 
 from loggers import timer
-from .iou import compute_iou
+from .metrics import compute_iou
 from utils.keras_utils import TensorSpec, ops, graph_compile
 from .non_max_suppression import _pad_boxes_to_tile_size, _prepare_boxes, nms, fast_nms
 
@@ -28,7 +28,7 @@ def lanms(boxes    : TensorSpec(shape = (None, None, 4), dtype = 'float'),
           scores   : TensorSpec(shape = (None, None), dtype = 'float') = None,
           max_output_size  : TensorSpec(shape = (), dtype = 'int32')   = None,
           nms_threshold    : TensorSpec(shape = (), dtype = 'float32')     = 0.25,
-          merge_threshold  : TensorSpec(shape = (), dtype = 'float')   = 0.1,
+          merge_threshold  : TensorSpec(shape = (), dtype = 'float')   = 0.3,
           max_iter      : TensorSpec(shape = (), dtype = 'int32')   = None,
           merge_method  = 'union',
           tile_size = None

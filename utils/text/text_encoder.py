@@ -17,7 +17,6 @@ import logging
 import regex as re
 import numpy as np
 import pandas as pd
-import tensorflow as tf
 
 from keras import tree
 from functools import cached_property, cache
@@ -531,7 +530,7 @@ class TextEncoder(object):
         
         return tokens
     
-    @execute_eagerly(signature = text_signature, default_key = 'text', numpy = True)
+    @execute_eagerly(signature = text_signature, default_key = ('text', 'label'), numpy = True)
     def encode(self, text, *, return_type = 'np', ** kwargs):
         """
             Encode text in np.ndarray
@@ -562,12 +561,14 @@ class TextEncoder(object):
         ]
         tokens = [token for token in tokens if token not in (None, -1)]
 
-        if add_sos and tokens[0] != self.sos_token_idx: tokens.insert(0, self.sos_token_idx)
-        if add_eos and tokens[-1] != self.eos_token_idx: tokens.append(self.eos_token_idx)
+        if (add_sos) and (len(tokens) == 0 or tokens[0] != self.sos_token_idx):
+            tokens.insert(0, self.sos_token_idx)
+        if (add_eos) and (len(tokens) == 0 or tokens[-1] != self.eos_token_idx):
+            tokens.append(self.eos_token_idx)
         
         if return_type == 'list': return tokens
         elif return_type == 'np': return np.array(tokens, dtype = np.int32)
-        elif return_type == 'tf': return tf.convert_to_tensor(tokens, dtype = tf.int32)
+        elif return_type == 'tf': return ops.convert_to_tf_tensor(tokens, dtype = 'int32')
         elif return_type == 'tensor':   return ops.convert_to_tensor(tokens, dtype = 'int32')
         else:   raise ValueError("Unknown `return_type` : {}".format(return_type))
 
@@ -659,7 +660,7 @@ class TextEncoder(object):
         return self.encode(text, ** kwargs) if encode else text
 
     @execute_eagerly(signature = [
-        text_signature, tf.TensorSpec(shape = (None, ), dtype = tf.int32, name = 'types')
+        text_signature, TensorSpec(shape = (None, ), dtype = 'int32', name = 'types')
     ], numpy = True)
     def join(self, * sentences, sep_token = None, return_type = 'np', ** kwargs):
         kwargs.pop('text', None)
@@ -679,10 +680,10 @@ class TextEncoder(object):
             encoded.extend(part)
             ids.extend([i] * len(part))
         
-        if add_sos and encoded[0] != self.sos_token_idx:
+        if (add_sos) and (len(encoded) == 0 or encoded[0] != self.sos_token_idx):
             encoded.insert(0, self.sos_token_idx)
             ids.insert(0, 0)
-        if add_eos and encoded[-1] != self.eos_token_idx:
+        if (add_eos) and (len(encoded) == 0 or encoded[-1] != self.eos_token_idx):
             encoded.append(self.eos_token_idx)
             ids.append(len(encoded_parts) - 1)
         
@@ -691,8 +692,8 @@ class TextEncoder(object):
             return np.array(encoded, dtype = np.int32), np.array(ids, dtype = np.int32)
         elif return_type == 'tf':
             return (
-                tf.convert_to_tensor(encoded, dtype = 'int32'),
-                tf.convert_to_tensor(ids, dtype = 'int32')
+                ops.convert_to_tf_tensor(encoded, dtype = 'int32'),
+                ops.convert_to_tf_tensor(ids, dtype = 'int32')
             )
         elif return_type == 'tensor':
             return (
@@ -853,21 +854,21 @@ class TextEncoder(object):
         
         lengths = [len(part) for part in parts]
         
-        if return_type == 'list':
-            return parts, lengths
-        elif return_type == 'np':
+        if return_type == 'list': return parts, lengths
+        
+        parts = pad_batch(parts, self.blank_token_idx, dtype = np.int32)
+        if return_type == 'np':
             return (
-                pad_batch(parts, self.blank_token_idx, dtype = np.int32),
-                np.array(lengths, dtype = np.int32)
+                parts, np.array(lengths, dtype = np.int32)
             )
         elif return_type == 'tf':
             return (
-                tf.cast(pad_batch(parts, self.blank_token_idx, dtype = np.int32), tf.int32),
-                tf.cast(lengths, dtype = tf.int32)
+                ops.convert_to_tf_tensor(parts, 'int32'),
+                ops.convert_to_tf_tensor(lengths, dtype = 'int32')
             )
         elif return_type == 'tensor':
             return (
-                ops.convert_to_tensor(pad_batch(parts, self.blank_token_idx, dtype = np.int32), 'int32'),
+                ops.convert_to_tensor(parts, dtype = 'int32'),
                 ops.convert_to_tensor(lengths, dtype = 'int32')
             )
         else:
@@ -1195,8 +1196,8 @@ def compile_jinja_template(template):
 
 def execute_and_concat(fn_name):
     fn = getattr(TextEncoder, fn_name)
-    expanded_signature  = tf.nest.map_structure(
-        lambda sig: tf.TensorSpec(
+    expanded_signature  = tree.map_structure(
+        lambda sig: TensorSpec(
             shape = (None, ) + sig.shape, dtype = sig.dtype, name = sig.name
         ), fn.signature
     )
@@ -1256,7 +1257,7 @@ def execute_and_concat(fn_name):
         if return_type == 'np':
             return results
         elif return_type == 'tf':
-            return [tf.convert_to_tensor(res, 'int32') for res in results]
+            return [ops.convert_to_tf_tensor(res, 'int32') for res in results]
         elif return_type == 'tensor':
             return [ops.convert_to_tensor(res, 'int32') for res in results]
         else:

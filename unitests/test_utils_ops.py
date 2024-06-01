@@ -127,6 +127,30 @@ class TestCustomOps(CustomTestCase, parameterized.TestCase):
         self.assertEqual(ops.is_bool(array_cast), dtype == 'bool')
         self.assertEqual(ops.is_numeric(array_cast), dtype != 'bool')
     
+    @parameterized.parameters([
+        (0, 'int32'),
+        (0., 'float32'),
+        (True, 'bool'),
+        ('Hello World !', 'string'),
+        ([0, 1, 2], 'int32'),
+        ([0., 1., 2.], 'float32'),
+        ([0, 1., 2.], 'int32'), # should take the type of the 1st item
+        ([[0], [1]], 'int32'),
+        (np.zeros((5, ), dtype = 'uint8'), 'uint8'),
+        (np.zeros((5, ), dtype = 'int32'), 'int32'),
+        (np.zeros((5, ), dtype = 'int64'), 'int32'),
+        (np.zeros((5, ), dtype = 'float16'), 'float32'),
+        (np.zeros((5, ), dtype = 'float32'), 'float32'),
+        (np.zeros((5, ), dtype = 'bool'), 'bool'),
+        (K.zeros((5, ), dtype = 'uint8'), 'uint8'),
+        (K.zeros((5, ), dtype = 'int32'), 'int32'),
+        (K.zeros((5, ), dtype = 'float16'), 'float16'),
+        (K.zeros((5, ), dtype = 'float32'), 'float32'),
+        (K.zeros((5, ), dtype = 'bool'), 'bool'),
+    ])
+    def test_get_convertion_type(self, data, target):
+        self.assertEqual(ops.get_convertion_dtype(data), target)
+    
     @parameterized.product(
         data  = (np.ones((5, ), dtype = 'float16'), K.ones((5, ), dtype = 'float16'), (256, 256)),
         dtype = (None, 'int32', 'float', 'float16', 'float32')
@@ -149,6 +173,13 @@ class TestCustomOps(CustomTestCase, parameterized.TestCase):
         if K.is_tensor(data) and dtype in (None, 'float', 'float16'):
             self.assertTrue(tensor is data, 'the function created a new tensor')
         
+        try:
+            tf_tensor = ops.convert_to_tf_tensor(data, dtype)
+            self.assertTfTensor(tensor)
+            if dtype not in (None, 'float'):
+                self.assertTrue(ops.dtype_to_str(tensor.dtype) == dtype)
+        except ops.TensorflowNotAvailable:
+            self.skip('Tensorflow is not available, skipping the convert_to_tf_tensor test')
     
     @parameterized.parameters(([16], ), ([4, 4], ), ([4, 2, 2], ), ([2, 2, 2, 2], ))
     def test_shapes(self, shape):

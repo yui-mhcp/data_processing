@@ -9,14 +9,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from utils.distance import *
-from utils.threading import *
-from utils.embeddings import *
-from utils.file_utils import *
-from utils.plot_utils import *
-from utils.pandas_utils import *
-from utils.stream_utils import *
-from utils.generic_utils import *
-from utils.sequence_utils import *
-from utils.comparison_utils import *
-from utils.wrapper_utils import *
+from .hparams import HParams
+from .distance import *
+from .threading import *
+from .embeddings import *
+from .file_utils import *
+from .plot_utils import *
+from .pandas_utils import *
+from .stream_utils import *
+from .generic_utils import *
+from .sequence_utils import *
+from .comparison_utils import *
+from .wrapper_utils import *

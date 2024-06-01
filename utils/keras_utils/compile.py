@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import keras
 import inspect
 import logging
 import warnings
@@ -29,14 +28,24 @@ from utils.generic_utils import convert_to_str, get_annotations, get_args, get_k
 
 logger  = logging.getLogger(__name__)
 
-_jit_compile    = keras.backend.backend() != 'tensorflow'
+_jit_compile    = not ops.is_tensorflow_backend()
 _should_execute_eagerly = {}
+
+@cache
+def is_tensorflow_available():
+    try:
+        import tensorflow as tf
+        return True
+    except:
+        return False
 
 @dataclass
 class TensorSpec:
     shape   : Union[None, Tuple[int]] = None
     dtype   : str   = None
     name    : str   = None
+    nested  : bool  = False
+    static  : bool  = False
     
     def __hash__(self):
         return hash((self.shape, self.dtype))
@@ -148,7 +157,14 @@ def graph_compile(fn    = None,
             if skip_kwargs: kwargs = {k : v for k, v in kwargs.items() if k in fn_all_names}
             if prepare is not None: args, kwargs = prepare(* args, ** kwargs)
             
-            if follow_type_hints and fn_annots:
+            if force_tensorflow and not is_tensorflow_available():
+                warnings.warm(
+                    'Tensorflow is not available, running the function {} eagerly'.format(fn_name)
+                )
+                return fn(* args, ** kwargs)
+            
+            _follow_type_hints = follow_type_hints if follow_type_hints is not None else run_eagerly != True
+            if _follow_type_hints and fn_annots:
                 with time_logger.timer('follow_type_hints', debug = True):
                     args = tuple([
                         _cast_arg(arg, fn_annots[name], force_tensorflow) if name in fn_annots else arg
@@ -167,9 +183,9 @@ def graph_compile(fn    = None,
             
             if cast_defaults and defaults_to_cast:
                 with time_logger.timer('cast_defaults', debug = True):
-                    for k, annot in defaults_to_cast.items():
+                    for k, (val, annot) in defaults_to_cast.items():
                         if k not in fn_args[:len(args)] and k not in kwargs:
-                            kwargs[k] = _cast_arg(fn_kwargs[k], annot, force_tensorflow)
+                            kwargs[k] = _cast_arg(val, annot, force_tensorflow)
             
             if not ops.executing_eagerly(): return fn(* args, ** kwargs)
 
@@ -227,7 +243,8 @@ def graph_compile(fn    = None,
         skip_kwargs = not has_kwargs(fn)
         
         fn_annots = {
-            k : v for k, v in get_annotations(fn).items() if isinstance(v, TensorSpec)
+            k : v for k, v in get_annotations(fn).items()
+            if (isinstance(v, TensorSpec)) and (not v.static or ops.is_tensorflow_backend())
         }
         if 'input_signature' in compile_kwargs:
             _names = fn_args if fn_args[0] != 'self' else fn_args[1:]
@@ -235,15 +252,17 @@ def graph_compile(fn    = None,
                 name : sign for name, sign in zip(_names, compile_kwargs.pop('input_signature'))
             })
         
-        if static_args == 'auto':
+        if static_args == 'auto' and 'static_argnames' not in compile_kwargs:
             compile_kwargs['static_argnames'] = [
-                k for k in fn_all_names if k not in fn_annots
+                k for k in fn_all_names if k not in fn_annots and k not in ('args', 'kwargs', '_')
             ]
         
         defaults_to_cast    = {
-            k : v for k, v in fn_annots.items() if fn_kwargs.get(k, None) is not None
+            k : (v, fn_annots[k]) for k, v in fn_kwargs.items() if k in fn_annots
         }
         
+        fn_with_retracing_logs.__name__ = fn_name
+
         return inner
     
     compile_kwargs.update({
@@ -256,7 +275,7 @@ def graph_compile(fn    = None,
 def execute_eagerly(fn  = None,
                     Tout    = None,
                     signature   = None,
-                    default_key = None,
+                    default_key = (),
                     numpy   = False,
                     name    = None
                    ):
@@ -309,15 +328,18 @@ def execute_eagerly(fn  = None,
         @wraps(fn)
         def inner(* args, shape = Sout, key = default_key, ** kwargs):
             if ops.is_tensorflow_graph() and is_class_method:
+                idx = 0
                 function, args = getattr(args[0], fn.__name__), args[1:]
             else:
+                idx = 1 if is_class_method else 0
                 function = fn
             
-            if len(args) > 0 and isinstance(args[0], (dict, pd.Series)):
-                if key and key in args[0]:
-                    args = (args[0][key], ) + args[1:]
-                elif default_key and default_key in args[0]:
-                    args = (args[0][default_key], ) + args[1:]
+            if len(args) > idx and isinstance(args[idx], (dict, pd.Series)):
+                if not isinstance(key, (list, tuple)): key = [key]
+                for k in key:
+                    if k in args[idx]:
+                        args = args[:idx] + (args[idx][k], ) + args[idx + 1 :]
+                        break
 
             if not ops.is_tensorflow_graph():
                 if numpy:
@@ -349,13 +371,13 @@ def execute_eagerly(fn  = None,
                     fn_with_kwargs, [len(args)] + args_with_kv, Tout = Tout
                 )
 
-            if isinstance(shape, tuple):    shape = tf.TensorShape(shape)
-            elif isinstance(shape, list):   shape = [tf.TensorShape(s) for s in shape]
+            if isinstance(result, list): result = tuple(result)
+            if shape is None: shape = Sout
             if shape is not None:
-                result = tf.nest.map_structure(tf.ensure_shape, result, shape)
-            elif Sout is not None:
-                result = tf.nest.map_structure(tf.ensure_shape, result, Sout)
-
+                if isinstance(shape, tuple):    shape = tf.TensorShape(shape)
+                elif isinstance(shape, list):   shape = tuple([tf.TensorShape(s) for s in shape])
+                if shape is not None:
+                    result = tf.nest.map_structure(tf.ensure_shape, result, shape)
             return result
         
         is_class_method     = 'self' == list(inspect.signature(fn).parameters.keys())[0]
@@ -374,6 +396,7 @@ def execute_eagerly(fn  = None,
         Tout    = tree.map_structure(lambda s: s.dtype, signature)
         Sout    = tree.map_structure(lambda s: s.shape, signature)
     
+    if not isinstance(default_key, (list, tuple)): default_key = [default_key]
     return wrapper if fn is None else wrapper(fn)
 
 def compile_function(fn, jit_compile, force_tensorflow = False, ** kwargs):
@@ -398,6 +421,27 @@ def compile_function(fn, jit_compile, force_tensorflow = False, ** kwargs):
     
     return fn
 
+def tensorflow_only_function(fn):
+    if ops.is_tensorflow_backend(): return fn
+    
+    @wraps(fn)
+    def inner(* args, ** kwargs):
+        if ops.is_tensorflow_graph(): return fn(* args, ** kwargs)
+        
+        try:
+            import tensorflow as tf
+            args = tf.nest.map_structure(
+                lambda x: ops.convert_to_tf_tensor(x) if ops.is_tensor(x) else x, args
+            )
+            kwargs = tf.nest.map_structure(
+                lambda x: ops.convert_to_tf_tensor(x) if ops.is_tensor(x) else x, kwargs
+            )
+        except ImportError:
+            raise ops.TensorflowNotAvailable()
+        
+        return fn(* args, ** kwargs)
+    return inner
+
 def _should_cast_kwarg(x):
     if isinstance(x, dict): return all(_should_cast_kwarg(vi) for vi in x.values())
     if isinstance(x, list): return all(_should_cast_kwarg(xi) for xi in x)
@@ -412,11 +456,13 @@ def _cast_arg(value, annot, force_tensorflow = False, *, cache = True):
     if not force_tensorflow:
         convert_to_tensor = ops.convert_to_tensor
     else:
-        import tensorflow as tf
-        convert_to_tensor = tf.convert_to_tensor
+        convert_to_tensor = ops.convert_to_tf_tensor
     
     if isinstance(annot, TensorSpec):
-        return convert_to_tensor(value, annot.dtype)
+        if annot.nested and isinstance(value, list):
+            return [convert_to_tensor(v) for v in value]
+        else:
+            return convert_to_tensor(value, annot.dtype)
         #return ops.ensure_shape(ops.convert_to_tensor(value, annot.dtype), annot.shape)
     elif annot is None and _should_cast_kwarg(value):
         return convert_to_tensor(value)

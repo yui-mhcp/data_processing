@@ -39,4 +39,7 @@ stft    = build_op('stft', _tf_stft, disable_np = True)
 resize_image    = image_resize  = resize    = build_op(
     'image.resize', _tf_image_resize, disable_np = True
 )
+rgb_to_grayscale    = build_op(
+    'image.rgb_to_grayscale', disable_np = True
+)
 

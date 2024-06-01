@@ -1,5 +1,5 @@
-# Copyright (C) 2022-now yui-mhcp project's author. All rights reserved.
-# Licenced under the Affero GPL v3 Licence (the "Licence").
+# Copyright (C) 2022-now yui-mhcp project author. All rights reserved.
+# Licenced under a modified Affero GPL v3 Licence (the "Licence").
 # you may not use this file except in compliance with the License.
 # See the "LICENCE" file at the root of the directory for the licence information.
 #
@@ -12,6 +12,7 @@
 import os
 import enum
 import logging
+import importlib
 import pandas as pd
 
 from sklearn.utils import shuffle as sklearn_shuffle
@@ -30,10 +31,12 @@ _custom_datasets    = {}
 _custom_processing  = {}
 
 class Task(enum.Enum):
+    TEXT_DETECTION      = 'text detection'
     OBJECT_DETECTION    = 'object detection'
     OBJECT_SEGMENTATION = 'object segmentation'
     FACE_RECOGNITION    = 'face recognition'
     
+    OCR     = 'OCR'
     IMAGE_CAPTIONING    = 'image captioning'
     
 def set_dataset_dir(directory):
@@ -48,7 +51,6 @@ def get_dataset_dir(dataset = None):
 def clean_dataset_name(name):
     if isinstance(name, (list, tuple)): return [clean_dataset_name(n) for n in name]
     return ''.join([c for c in name.lower() if c.isalnum()])
-
 
 def add_dataset(name, processing_fn, task, ** kwargs):
     if not isinstance(name, (list, tuple)): name = [name]
@@ -69,9 +71,9 @@ def is_custom_dataset(dataset):
     return clean_dataset_name(dataset) in _custom_datasets
 
 def show_custom_datasets(task = None):
-    for t, datasets in _dataset_tasks.items():
+    for t, datasets in _tasks.items():
         if task and t not in task: continue
-        logger.info('Task {} :\t{}'.format(t, tuple(datasets)))
+        logger.info('{} :\t{}'.format(t, tuple(datasets)))
 
 @dispatch_wrapper(_custom_processing, 'dataset')
 def load_custom_dataset(dataset,
@@ -164,3 +166,7 @@ def maybe_load_embedding(directory, dataset, ** kwargs):
         from utils.embeddings import load_embedding
         return load_embedding(directory, dataset = dataset, ** kwargs)
     return dataset
+
+for module in os.listdir(__path__[0]):
+    if module.startswith(('_', '.')) or '_old' in module: continue
+    importlib.import_module(__package__ + '.' + module.replace('.py', ''))

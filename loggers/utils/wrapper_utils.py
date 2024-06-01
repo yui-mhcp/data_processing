@@ -12,7 +12,7 @@
 import inspect
 import functools
 
-from utils.generic_utils import get_kwargs, signature_to_str
+from .generic_utils import get_kwargs, signature_to_str
 
 class ContextManager:
     def __init__(self, enter = None, exit = None):
@@ -51,7 +51,7 @@ def dispatch_wrapper(methods, name, default = None):
         fn.dispatch = dispatch
         fn.methods  = methods
         
-        for method_name, method_fn in sorted(methods.items()):
+        for method_name, method_fn in methods.items():
             fn.dispatch(method_fn, method_name)
         
         return fn

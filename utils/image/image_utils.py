@@ -172,7 +172,7 @@ def pad_image(image,
             half_h, half_w  = pad_h // 2, pad_w // 2
             padding = [(half_h, pad_h - half_h), (half_w, pad_w - half_w), (0, 0)]
         elif pad_mode == 'repeat_last':
-            batch_axis = [1] if ops.rank(image) == 4 else []
+            batch_axis = [1] if len(ops.shape(image)) == 4 else []
             if pad_w > 0:
                 image = ops.concat([
                     image, ops.tile(image[..., -1:, :], batch_axis + [1, pad_w, 1])
@@ -185,7 +185,7 @@ def pad_image(image,
             raise ValueError('Unknown padding mode : {}'.format(pad_mode))
         
         if padding is not None:
-            if ops.rank(image) == 4: padding = [(0, 0)] + padding
+            if len(ops.shape(image)) == 4: padding = [(0, 0)] + padding
             image   = ops.pad(image, padding, constant_values = pad_value)
 
     return image
@@ -221,7 +221,7 @@ def get_resized_shape(image,
         if any(arg is not None for arg in (min_shape, max_shape, multiples)):
             raise ValueError('When providing a fixed target shape, other arguments are not allowed')
         
-        return shape
+        return shape[:2]
     
     img_shape   = ops.convert_to_numpy(ops.shape(image), 'int32')[-3 : -1]
     shape   = ops.convert_to_numpy(shape, 'int32')[:2] if shape is not None else img_shape

@@ -1,5 +1,5 @@
-# Copyright (C) 2022-now yui-mhcp project's author. All rights reserved.
-# Licenced under the Affero GPL v3 Licence (the "Licence").
+# Copyright (C) 2022-now yui-mhcp project author. All rights reserved.
+# Licenced under a modified Affero GPL v3 Licence (the "Licence").
 # you may not use this file except in compliance with the License.
 # See the "LICENCE" file at the root of the directory for the licence information.
 #
@@ -258,7 +258,7 @@ class TestExecuteEagerly(CustomTestCase, parameterized.TestCase):
         def foo(x, y):
             self.assertFalse(tf.executing_eagerly())
             out = foo_eager(x, y)
-            self.assertTrue(isinstance(out, list))
+            self.assertTrue(isinstance(out, (list, tuple)), 'Got type {}'.format(type(out)))
             self.assertTrue(out[0].dtype == tf.float32, 'The dtype is {}'.format(out[0].dtype))
             self.assertTrue(len(out[0].shape) == 1, 'The shape is {}'.format(out[0].shape))
 

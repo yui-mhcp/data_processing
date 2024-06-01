@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from utils.text.text_processing import get_pairs
+from .text_processing import get_pairs
 
 def bytes_to_unicode():
     # Copyright 2018 The Open AI Team Authors and The HuggingFace Inc. team.

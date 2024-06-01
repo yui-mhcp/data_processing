@@ -9,10 +9,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .iou import *
+from .filters import *
+from .metrics import *
 from .polygons import *
 from .converter import *
 from .processing import *
+from .combination import *
 from .non_max_suppression import *
 from .locality_aware_nms import *
 from .visualization import Shape, draw_boxes, show_boxes

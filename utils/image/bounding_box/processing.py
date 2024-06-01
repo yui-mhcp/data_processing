@@ -90,12 +90,14 @@ def sort_boxes(boxes,
             )[0]
             indices.extend(row_indices[ops.argsort(x[row_indices])])
             to_set[row_indices] = False
+        indices = np.array(indices, dtype = np.int32)
     else:
         raise ValueError('Unsupported sorting criterion : {}'.format(method))
     
     return indices if return_indices else select_boxes(boxes, indices)
 
 def select_boxes(boxes, indices, axis = -2):
+    if not ops.is_array(indices): indices = ops.convert_to_numpy(indices)
     if isinstance(boxes, dict):
         boxes = boxes.copy()
         boxes['boxes'] = select_boxes(boxes['boxes'], indices, axis = -2)
@@ -103,7 +105,7 @@ def select_boxes(boxes, indices, axis = -2):
             if k in boxes: boxes[k] = select_boxes(boxes[k], indices, axis = -1)
         return boxes
     
-    if len(ops.shape(indices)) == 1: return ops.gather(boxes, indices)
+    if len(ops.shape(indices)) == 1: return ops.gather(boxes, indices, axis = 0)
     if axis == -2: indices = indices[..., None]
     return ops.take_along_axis(boxes, indices, axis = axis)
 

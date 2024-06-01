@@ -22,15 +22,15 @@ def get_rotation_matrix(theta):
     return np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
 
 def filter_polys(res, input_shape):
-    input_shape = input_shape[::-1].reshape((1, 1, 2))
-    return np.sum(
+    input_shape = input_shape[::-1][None, None, :]
+    return np.count_nonzero(
         np.any(res < 0, axis = -1) | np.any(res >= input_shape, axis = -1), axis = -1
     ) <= 1
 
 @timer
 def restore_polys(pos, d, angle, input_shape, output_shape):
     scale   = np.array(input_shape) // np.array(output_shape)
-    pos     = pos * scale.reshape((1, 2))
+    pos     = pos * scale[None]
 
     x, y    = pos[:, 0], pos[:, 1]
     

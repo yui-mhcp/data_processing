@@ -11,9 +11,9 @@
 
 from .ops_builder import build_op, build_custom_op
 
-shuffle = build_op('keras.random.shuffle', disable_np = True)
-uniform = build_op('keras.random.uniform', disable_np = True)
-normal  = build_op('keras.random.normal', disable_np = True)
+shuffle = build_op('keras.random.shuffle', 'random.shuffle', disable_np = True)
+uniform = build_op('keras.random.uniform', 'random.uniform', disable_np = True)
+normal  = build_op('keras.random.normal', 'random.normal', disable_np = True)
 randint = build_op(
     'keras.random.randint', 'random.uniform', tf_kwargs = {'dtype' : 'int32'}, disable_np = True
 )

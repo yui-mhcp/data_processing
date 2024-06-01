@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .ops_builder import _is_numpy, build_op
+from .ops_builder import _is_numpy, build_op, build_custom_op
 
 def _python_while(cond, body, loop_vars, maximum_iterations = float('inf')):
     is_tuple = isinstance(loop_vars, (list, tuple))
@@ -26,4 +26,22 @@ def _check_numpy(args, kwargs, _):
 
 while_loop  = build_op(
     'while_loop', np_op = _python_while, is_numpy_check = _check_numpy
+)
+
+def scan_tf(f, init, xs, output = None):
+    import tensorflow as tf
+    
+    def body(state_with_out, inp):
+        return f(state_with_out[0], inp)
+    
+    if output is None:
+        _, output = f(init, tf.nest.map_structure(lambda x: x[0], xs))
+
+    states, outputs = tf.scan(body, xs, initializer = (init, output))
+    return tf.nest.map_structure(lambda s: s[-1], states), outputs
+
+scan    = build_custom_op(
+    tf_fn   = scan_tf,
+    jax_fn  = 'lax.scan',
+    name    = 'scan'
 )

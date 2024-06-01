@@ -308,8 +308,11 @@ def normalize_box(x, y, w, h, normalize_mode, dtype = None, ** kwargs):
     if image_h is None:
         image_h, image_w = _get_image_size_from_kwargs(kwargs)
 
+    if ops.is_tensor(x):
+        image_h, image_w = ops.cast(image_h, 'float32'), ops.cast(image_w, 'float32')
     if rel: # normalize_mode == NORMALIZE_WH
         return (x * image_w, y * image_h, w * image_w, h * image_h, dtype or 'int32')
+    x, y, w, h = [ops.cast(coord, 'float32') for coord in (x, y, w, h)]
     return (x / image_w, y / image_h, w / image_w, h / image_h, dtype or 'float32')
 
 def _is_valid_format(source, target):
