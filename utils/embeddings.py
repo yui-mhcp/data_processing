@@ -19,12 +19,13 @@ import pandas as pd
 from tqdm import tqdm
 from multiprocessing import cpu_count
 
+from .file_utils import load_data, dump_data, path_to_unix
 from utils.keras_utils import TensorSpec, graph_compile, ops
 
 logger = logging.getLogger(__name__)
 
-_allowed_embeddings_ext = ('.csv', '.npy', '.pkl', '.pdpkl')
-_default_embedding_ext  = '.csv'
+_allowed_embeddings_ext = ('.csv', '.npy', '.pkl', '.pdpkl', '.embeddings.h5')
+_default_embedding_ext  = '.embeddings.h5'
 _embedding_filename = 'embeddings_{}'
 
 _accepted_modes     = ('random', 'mean', 'average', 'avg', 'int', 'callable')
@@ -197,8 +198,6 @@ def load_embedding(directory,
             - else  : `os.path.join(directory, embedding_name)`
         
     """
-    from utils.file_utils import load_data, path_to_unix
-
     if os.path.isfile(directory):
         emb_file = directory
     else:
@@ -222,19 +221,18 @@ def load_embedding(directory,
         return None
     
     embeddings  = load_data(emb_file)
-    if not isinstance(embeddings, pd.DataFrame): return embeddings
-
-    
-    if any('Unnamed:' in col for col in embeddings.columns):
+    if isinstance(embeddings, dict):
+        embeddings = pd.DataFrame({k : list(v) for k, v in embeddings.items()})
+    elif not isinstance(embeddings, pd.DataFrame):
+        return embeddings
+    elif any('Unnamed:' in col for col in embeddings.columns):
         embeddings = embeddings.drop(
             columns = [col for col in embeddings.columns if 'Unnamed:' in col]
         )
     
-    for embedding_col_name in [col for col in embeddings.columns if col.endswith('embedding')]:
-        if isinstance(embeddings.loc[0, embedding_col_name], np.ndarray): continue
-        embeddings[embedding_col_name] = embeddings[embedding_col_name].apply(
-            lambda x: embeddings_to_np(x)
-        )
+    for col in embeddings.columns:
+        if 'embedding' not in col or isinstance(embeddings.loc[0, col], np.ndarray): continue
+        embeddings[col] = embeddings[col].apply(embeddings_to_np)
     
     if aggregate_on is not None and aggregate_on in embeddings.columns:
         embeddings = aggregate_embeddings(
@@ -244,14 +242,14 @@ def load_embedding(directory,
     if filename_prefix is not None and 'filename' in embeddings.columns:
         if filename_prefix is True:
             try:
-                from datasets.custom_datasets import get_dataset_dir
+                from utils.datasets import get_dataset_dir
                 filename_prefix = get_dataset_dir()
             except (ImportError, ModuleNotFoundError):
                 pass
         
         if isinstance(filename_prefix, str):
             embeddings['filename'] = embeddings['filename'].apply(
-                lambda f: os.path.join(filename_prefix, f)
+                lambda f: os.path.join(filename_prefix, f) if not f.startswith(filename_prefix) else f
             )
     
     if dataset is None: return embeddings
@@ -260,7 +258,7 @@ def load_embedding(directory,
     
     for col in intersect:
         if embeddings[col].dtype != dataset[col].dtype:
-            embeddings[col] = embeddings[col].apply(lambda i: str(i))
+            embeddings[col] = embeddings[col].apply(str)
         
         if 'filename' in col:
             embeddings[col] = embeddings[col].apply(path_to_unix)
@@ -273,7 +271,7 @@ def load_embedding(directory,
         raise ValueError('Merge resulted in an empty dataframe !\n  Columns : {}\n  Embeddings : {}'.format(intersect, embeddings))
     
     dataset = dataset.dropna(
-        axis = 'index', subset = ['embedding', aggregate_name]
+        axis = 'index', subset = ['embedding']
     )
     
     return dataset
@@ -297,8 +295,6 @@ def save_embeddings(directory,
                 It is useful when saving datasets as the dataset directory may differ between hosts, meaning that filenames also differ.
                 Note that it is removed only at the start of filenames such that if your filename is not in the dataset directory, it will have no effect ;)
     """
-    from utils.file_utils import dump_data, path_to_unix
-
     if os.path.splitext(directory)[1] in _allowed_embeddings_ext:
         embedding_file = directory
     else:
@@ -322,7 +318,7 @@ def save_embeddings(directory,
     elif remove_file_prefix is not None and isinstance(embeddings, pd.DataFrame) and 'filename' in embeddings.columns:
         if remove_file_prefix is True:
             try:
-                from datasets.custom_datasets import get_dataset_dir
+                from utils.datasets import get_dataset_dir
                 remove_file_prefix = get_dataset_dir()
             except (ImportError, ModuleNotFoundError):
                 pass
@@ -450,14 +446,14 @@ def compute_centroids(embeddings    : TensorSpec(shape = (None, None), dtype = '
     """
     uniques, indexes, counts = ops.unique(ids, return_inverse = True, return_counts = True)
     # mask.shape == [len(uniques), len(embeddings)]
-    mask = ops.arange(ops.size(uniques))[:, np.newaxis] == indexes[np.newaxis, :]
+    mask = ops.arange(ops.size(uniques))[:, None] == indexes[None, :]
     return uniques, ops.divide_no_nan(
         ops.sum(ops.where(
-            mask[:, :, np.newaxis],
-            embeddings[np.newaxis, :, :],
+            mask[:, :, None],
+            embeddings[None, :, :],
             ops.convert_to_tensor(0, embeddings.dtype)
         ), axis = 1),
-        ops.cast(counts[:, np.newaxis], dtype = embeddings.dtype)
+        ops.cast(counts[:, None], dtype = embeddings.dtype)
     )
 
 @graph_compile
@@ -484,7 +480,7 @@ def get_embeddings_with_ids(embeddings  : TensorSpec(shape = (None, None), dtype
         Return :
             - (embeddings, assignment)  : subset of `embeddings` and `assignment` with valid id
     """
-    mask    = ops.any(assignment[:, np.newaxis] == ids[np.newaxis, :], axis = -1)
+    mask    = ops.any(assignment[:, None] == ids[None, :], axis = -1)
     return embeddings[mask], assignment[mask]
 
 def visualize_embeddings(embeddings,

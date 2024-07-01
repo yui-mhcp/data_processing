@@ -37,10 +37,10 @@ def split_gpus(n, memory = 2048):
         len(tf.config.list_physical_devices('GPU')), len(tf.config.list_logical_devices('GPU'))
     ))
 
-def limit_gpu_memory(limit = 4096):
-    if keras.backend.backend() != 'tensorflow': return
-    import tensorflow as tf
+def _limit_gpu_memory_tf(limit = 4096):
     """ Limits the tensorflow visible GPU memory on each available physical device """
+    import tensorflow as tf
+
     global _limited_memory
     if _limited_memory or not limit: return
     
@@ -54,9 +54,14 @@ def limit_gpu_memory(limit = 4096):
     except Exception as e:
         logger.error("Error while limiting tensorflow GPU memory : {}".format(e))
 
-def set_memory_growth(memory_growth = True):
-    if keras.backend.backend() != 'tensorflow': return
+limit_gpu_memory = build_custom_op(
+    tf_fn   = _limit_gpu_memory_tf,
+    name    = 'set_memory_growth'
+)
+
+def _set_memory_growth_tf(memory_growth = True):
     import tensorflow as tf
+    
     gpus = tf.config.list_physical_devices('GPU')
     try:
         for gpu in gpus:
@@ -64,7 +69,12 @@ def set_memory_growth(memory_growth = True):
     except Exception as e:
         logger.error("Error while setting memory growth : {}".format(e))
 
-def get_memory_stats_tf(gpu = 'GPU:0'):
+set_memory_growth = build_custom_op(
+    tf_fn   = _set_memory_growth_tf,
+    name    = 'set_memory_growth'
+)
+
+def _get_memory_stats_tf(gpu = 'GPU:0'):
     import tensorflow as tf
 
     if isinstance(gpu, int): gpu = 'GPU:{}'.format(gpu)
@@ -73,7 +83,7 @@ def get_memory_stats_tf(gpu = 'GPU:0'):
     tf.config.experimental.reset_memory_stats(gpu)
     return mem_usage
 
-def get_memory_stats_jax(gpu = 0):
+def _get_memory_stats_jax(gpu = 0):
     import jax
 
     if isinstance(gpu, str): gpu = int(gpu.split(':')[-1])
@@ -82,8 +92,8 @@ def get_memory_stats_jax(gpu = 0):
     return {'current' : mem_usage['bytes_in_use'], 'peak' : mem_usage['peak_bytes_in_use']}
 
 get_memory_stats = build_custom_op(
-    tf_fn   = get_memory_stats_tf,
-    jax_fn  = get_memory_stats_jax,
+    tf_fn   = _get_memory_stats_tf,
+    jax_fn  = _get_memory_stats_jax,
     name    = 'get_memory_stats'
 )
 

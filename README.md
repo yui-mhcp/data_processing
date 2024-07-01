@@ -1,7 +1,5 @@
 # :yum: Data processing utilities
 
-**EXPERIMENTAL** This project contains data processing functions fully compatible with **Keras 3** and **tensorflow graph** modes, even with non-tensorflow backend !
-
 Check the [CHANGELOG](https://github.com/yui-mhcp/yui-mhcp/blob/main/CHANGELOG.md) file to have a global overview of the latest updates / new features ! :yum:
 
 ## Project structure
@@ -11,13 +9,15 @@ Check the provided notebooks to have an overview of the available features !
 ```bash
 ├── example_data        : data used for the demonstrations
 ├── loggers             : custom utilities for the `logging` module
+│   ├── utils       : subset of the utils module to make loggers fully independant
 │   ├── __init__.py         : defines useful utilities to control `logging`
 │   ├── telegram_handler.py : custom logger using the telegram bot api
 │   ├── time_logging.py     : custom timer features
-│   ├── tts_handler.py      : custom logger using the Text-To-Speech models
-│   └── utils.py            : subset of the `utils` module to ensure independance
+│   └── tts_handler.py      : custom logger using the Text-To-Speech models
 ├── unitests            : custom unit-testing for the different `utils` modules
 │   ├── __init__.py
+│   ├── test_custom_objects.py  : not executed in this project (requires `custom_train_objects`)
+│   ├── test_layers_masking.py  : not executed in this project (requires `custom_layers`)
 │   ├── test_transformers.py    : test `transformers.AutoTokenizer` convertion to `TextEncoder`
 │   ├── test_utils_audio.py
 │   ├── test_utils_boxes.py
@@ -26,7 +26,8 @@ Check the provided notebooks to have an overview of the available features !
 │   ├── test_utils_distance.py
 │   ├── test_utils_image.py
 │   ├── test_utils_ops.py
-│   └── test_utils_text.py
+│   ├── test_utils_text.py
+│   └── test_utils_threading.py
 ├── utils
 │   ├── audio                   : audio utilities
 │   │   ├── __init__.py
@@ -100,10 +101,10 @@ Check the provided notebooks to have an overview of the available features !
 │   │   └── text_processing.py      : custom text / logits processing functions
 │   ├── threading               : custom producer-consumer methods
 │   │   ├── __init__.py
-│   │   ├── consumer.py
-│   │   ├── multiproc_priority_queue.py
-│   │   ├── producer.py
-│   │   └── threaded_dict.py
+│   │   ├── consumer.py         : multi-threaded consumer with observers
+│   │   ├── priority_queue.py   : custom `PriorityQueue` with order consistency
+│   │   ├── producer.py         : multi-threaded generator with observers
+│   │   └── threaded_dict.py    : thread-safe `dict` with blocking get
 │   ├── __init__.py
 │   ├── comparison_utils.py     : convenient comparison features for various data types
 │   ├── embeddings.py           : embeddings saving / loading
@@ -267,10 +268,10 @@ If you find this project useful in your work, please add this citation to give i
 
 ## Notes and references 
 
-- [1] The text cleaning module (`text.cleaners`) is inspired from [NVIDIA tacotron2](https://github.com/NVIDIA/tacotron2) repository. Their implementation of `Short-Time Fourrier Transform (STFT)` is also available in `audio/stft.py`, adapted in `keras 3`.
+- The text cleaning module (`text.cleaners`) is inspired from [NVIDIA tacotron2](https://github.com/NVIDIA/tacotron2) repository. Their implementation of `Short-Time Fourrier Transform (STFT)` is also available in `audio/stft.py`, adapted in `keras 3`.
 
-- [2] The provided embeddings in `example_data/embeddings/embeddings_256_voxforge.csv` has been generated based on samples of the [VoxForge](http://www.voxforge.org/) dataset, and embedded with an [AudioSiamese](https://github.com/yui-mhcp/siamese_networks) model (`audio_siamese_256_mel_lstm`).
+- The provided embeddings in `example_data/embeddings/embeddings_256_voxforge.csv` has been generated based on samples of the [VoxForge](http://www.voxforge.org/) dataset, and embedded with an [AudioSiamese](https://github.com/yui-mhcp/siamese_networks) model (`audio_siamese_256_mel_lstm`).
 
-- [3] The [Keras 3 API](https://keras.io/api/) which has been (*partially*) adapted in the `keras_utils/ops` module to enable `numpy` backend, and `tf.data` compatibility
-
-- [4] The [tf.function](https://www.tensorflow.org/guide/function?hl=fr) guide 
+Tutorials :
+- The [Keras 3 API](https://keras.io/api/) which has been (*partially*) adapted in the `keras_utils/ops` module to enable `numpy` backend, and `tf.data` compatibility
+- The [tf.function](https://www.tensorflow.org/guide/function?hl=fr) guide 

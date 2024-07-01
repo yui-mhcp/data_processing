@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import librosa
 import numpy as np
 import random as py_random
 

@@ -13,6 +13,7 @@ import keras
 import unittest
 
 from keras import tree
+
 from unitests import CustomTestCase
 try:
     err = None

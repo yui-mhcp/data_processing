@@ -22,7 +22,7 @@ logger      = logging.getLogger(__name__)
     task = [Task.TEXT_DETECTION, Task.OCR],
     directory = '{}/SynthText/SynthText'
 )
-def preprocess_synthtext_annots(directory, tqdm = lambda x: x, ** kwargs):
+def load_data(directory, tqdm = lambda x: x, ** kwargs):
     from scipy.io import loadmat
     
     from utils.image.box_utils import BoxFormat, convert_box_format

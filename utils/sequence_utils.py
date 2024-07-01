@@ -21,7 +21,7 @@ def pad_batch(batch, pad_value = 0, max_length = None, dtype = None):
         However, all data must have the same rank (number of dimensions)
         
         Arguments : 
-            - batch         : list of np.ndarray / tf.Tensor
+            - batch         : list of np.ndarray / Tensor
             - pad_value     : the value to add as padding
             - max_length    : maximum length for each dimension. If not given, take the max length of datas 
             - dtype : dtype of the final output
@@ -33,10 +33,7 @@ def pad_batch(batch, pad_value = 0, max_length = None, dtype = None):
         if not isinstance(batch[0], list): return np.array(batch)
         batch = [np.array(b) for b in batch]
     
-    if dtype is None:
-        dtype = batch[0].dtype
-        if dtype in (object, tf.string): dtype = object
-        elif dtype != tf.string:         dtype = keras.backend.standardize_dtype(batch[0].dtype)
+    if dtype is None: dtype = ops.dtype_to_str(batch[0].dtype)
     
     ndim = len(batch[0].shape)
     assert all(len(b.shape) == ndim for b in batch)

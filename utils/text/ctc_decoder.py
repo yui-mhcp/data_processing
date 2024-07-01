@@ -42,8 +42,7 @@ def ctc_decode(sequence, lengths = None, blank_index = 0, method = 'greedy', ** 
 @ctc_decode.dispatch('greedy')
 @graph_compile(input_signature = [
     TensorSpec(shape = (None, None, None), dtype = 'float32'),
-    TensorSpec(shape = (None, ), dtype = 'int32'),
-    TensorSpec(shape = (), dtype = 'int32')
+    TensorSpec(shape = (None, ), dtype = 'int32')
 ])
 def ctc_greedy_decoder(sequence, lengths, blank_index):
     tokens, scores = K.ctc_decode(
@@ -54,8 +53,7 @@ def ctc_greedy_decoder(sequence, lengths, blank_index):
 @ctc_decode.dispatch(('beam', 'beam_search'))
 @graph_compile(input_signature = [
     TensorSpec(shape = (None, None, None), dtype = 'float32'),
-    TensorSpec(shape = (None, ), dtype = 'int32'),
-    TensorSpec(shape = (), dtype = 'int32')
+    TensorSpec(shape = (None, ), dtype = 'int32')
 ])
 def tf_ctc_beam_search_decoder(sequence, lengths, blank_index = 0):
     tokens, scores = K.ctc_decode(

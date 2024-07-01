@@ -105,6 +105,11 @@ def create_iterator(generator, ** kwargs):
         return _queue_iterator()
     elif callable(generator):
         return generator(** kwargs)
+    elif hasattr(generator, '__len__'):
+        def _iterator():
+            for i in range(len(generator)):
+                yield generator[i]
+        return _iterator
     return generator
 
 def text_input_stream(msg = 'Enter a text :', quit = 'q', ** kwargs):

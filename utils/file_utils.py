@@ -22,6 +22,7 @@ import keras.ops as K
 from tqdm import tqdm
 from keras import tree
 
+from utils.keras_utils import ops
 from utils.wrapper_utils import dispatch_wrapper, partial
 from utils.generic_utils import to_json, convert_to_str
 
@@ -202,6 +203,29 @@ def load_npz(filename, ** kwargs):
         data = {k : file[k] for k in file.files()}
     return data
 
+@load_data.dispatch(('h5', 'hdf5'))
+def load_h5(filename, keys = None, ** kwargs):
+    import h5py
+    
+    def get_data(v):
+        return v.asstr()[:] if v.dtype == object else np.array(v)
+    
+    def load_group(group, root):
+        for k, v in group.items():
+            path = '{}/{}'.format(group.name, k)
+            if isinstance(v, h5py.Group):
+                load_group(v, False)
+            else:
+                data[k if root else path] = get_data(v)
+
+    data = {}
+    with h5py.File(filename, 'r') as file:
+        if keys:
+            data = {k : get_data(file.get(k)) for k in keys if k in file}
+        else:
+            load_group(file, True)
+    return data
+
 @load_data.dispatch('pkl')
 def load_pickle(filename, ** kwargs):
     with open(filename, 'rb') as file:
@@ -251,6 +275,21 @@ def dump_json(filename, data, ** kwargs):
     with open(filename, 'w', encoding = 'utf-8') as file:
         file.write(data)
 
+@dump_data.dispatch(('h5', 'hdf5'))
+def dump_h5(filename, data, mode = 'w', ** kwargs):
+    import h5py
+    
+    if isinstance(data, pd.DataFrame): data = data.to_dict('list')
+    
+    with h5py.File(filename, mode) as file:
+        for k, v in data.items():
+            if k in file: continue
+            if not isinstance(v, np.ndarray): v = ops.convert_to_numpy(v)
+            
+            dtype = h5py.string_dtype() if not ops.is_numeric(v) else None
+            if dtype is not None: v = v.astype(dtype)
+            file.create_dataset(k, data = v, dtype = dtype)
+    
 @dump_data.dispatch('pkl')
 def dump_pickle(filename, data, ** kwargs):
     with open(filename, 'wb') as file:
@@ -262,25 +301,25 @@ def dump_txt(filename, data, ** kwargs):
         file.write(data)
 
 @dump_data.dispatch
-def save_npy(filename, data, ** kwargs):
+def dump_npy(filename, data, ** kwargs):
     np.save(filename, data)
     
 @dump_data.dispatch
-def save_npz(filename, data, ** kwargs):
+def dump_npz(filename, data, ** kwargs):
     np.savez(filename, ** data)
 
 @dump_data.dispatch
-def save_csv(filename, data, ** kwargs):
+def dump_csv(filename, data, ** kwargs):
     _to_df(data).to_csv(filename, ** kwargs)
 
-dump_data.dispatch(partial(save_csv, sep = '\t'), 'tsv')
+dump_data.dispatch(partial(dump_csv, sep = '\t'), 'tsv')
 
 @dump_data.dispatch('xlsx')
-def save_excel(filename, data, ** kwargs):
+def dump_excel(filename, data, ** kwargs):
     _to_df(data).to_excel(filename, ** kwargs)
 
 @dump_data.dispatch('pdpkl')
-def save_pandas_pickle(filename, data, ** kwargs):
+def dump_pandas_pickle(filename, data, ** kwargs):
     _to_df(data).to_pickle(filename, ** kwargs)
 
 def _to_df(data):
@@ -290,5 +329,5 @@ _default_ext    = {
     str     : 'txt',
     (list, tuple, set, dict, int, float) : 'json',
     np.ndarray      : 'npy',
-    pd.DataFrame    : 'csv'
+    pd.DataFrame    : 'h5'
 }

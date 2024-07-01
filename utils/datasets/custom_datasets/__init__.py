@@ -39,6 +39,10 @@ class Task(enum.Enum):
     OCR     = 'OCR'
     IMAGE_CAPTIONING    = 'image captioning'
     
+    TTS     = 'Text To Speech'
+    STT     = 'Speech To Text'
+    SI      = 'Speaker Identification'
+    
 def set_dataset_dir(directory):
     global _dataset_dir
     _dataset_dir = directory
@@ -59,6 +63,7 @@ def add_dataset(name, processing_fn, task, ** kwargs):
     if isinstance(processing_fn, str):
         processing_fn = _custom_processing.get(processing_fn, processing_fn)
     load_custom_dataset.dispatch(processing_fn, sorted(set(list(name) + canonical_name)))
+    
     if kwargs:
         for n in canonical_name:
             _custom_datasets[n]    = kwargs
@@ -96,7 +101,7 @@ def load_custom_dataset(dataset,
         for i, name in enumerate(dataset):
             dataset_i = load_custom_dataset(
                 name,
-                mode    = mode,
+                subset  = subset,
                 annotation_type = annotation_type,
                 random_state    = random_state,
                 shuffle = shuffle,
@@ -104,13 +109,14 @@ def load_custom_dataset(dataset,
             )
             if not isinstance(dataset_i, dict): dataset_i = {'train' : dataset_i}
             
-            for subset, data in dataset_i.items():
-                datasets.setdefault(subset, []).append(data)
+            for _set, data in dataset_i.items():
+                if 'dataset' not in data.columns: data['dataset'] = name
+                datasets.setdefault(_set, []).append(data)
         
         for subset, data in datasets.items():
             data = pd.concat(data, ignore_index = True, sort = False).dropna(axis = 'columns')
             if shuffle: data = sklearn_shuffle(data, random_state = random_state)
-            datasets[mode] = data
+            datasets[subset] = data
         
         return datasets if len(datasets) > 1 else list(datasets.values())[0]
     

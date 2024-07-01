@@ -13,10 +13,11 @@ import os
 import keras
 import unittest
 import warnings
+import threading
 import numpy as np
 import keras.ops as K
 
-from functools import cache
+from functools import cache, wraps
 
 warnings.filterwarnings('ignore')
 
@@ -26,6 +27,20 @@ from utils import load_data, dump_data, is_equal
 
 data_dir    = os.path.join(os.path.dirname(__file__), '__data')
 reproductibility_dir    = os.path.join(os.path.dirname(__file__), '__reproduction')
+
+class TimeoutException(Exception):
+    pass
+
+def timeout(t):
+    def wrapper(fn):
+        @wraps(fn)
+        def inner(self):
+            thread = threading.Thread(target = fn, args = (self, ), daemon = True)
+            thread.start()
+            thread.join(timeout = t)
+            if thread.is_alive(): self.fail('timeout !')
+        return inner
+    return wrapper
 
 @cache
 def get_graph_function(fn):

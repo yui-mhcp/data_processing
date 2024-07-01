@@ -12,10 +12,10 @@
 from functools import wraps
 from threading import Thread
 
-from .producer import StoppedException, Producer, Event, Item
+from .producer import StoppedException, Producer, Event
 from .consumer import Consumer
 from .threaded_dict import ThreadedDict
-from .multiproc_priority_queue import MultiprocessingPriorityQueue, PriorityItem
+from .priority_queue import PriorityQueue, MultiprocessingPriorityQueue, PriorityItem
 
 def run_in_thread(fn = None, name = None, callback = None, ** thread_kwargs):
     def wrapper(fn):

@@ -9,44 +9,51 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import queue
 import logging
 import threading
-
-from queue import Empty, Queue, LifoQueue, PriorityQueue
+import multiprocessing
+import multiprocessing.queues
 
 from utils.stream_utils import create_iterator
-from .producer import (
-    STOP_ITEM, _get_thread_name, Producer, Item, Event, StoppedException, update_item
-)
+from .producer import _get_thread_name, _item_to_str, Producer, Event, StoppedException, locked_property
+from .priority_queue import PriorityQueue
 
 logger = logging.getLogger(__name__)
 
-_queues = {
-    'queue' : Queue,
-    'fifo'  : Queue,
-    'stack' : LifoQueue,
-    'lifo'  : LifoQueue,
-    'priority'  : PriorityQueue,
-    'max_priority' : PriorityQueue,
-    'min_priority' : PriorityQueue
+STOP    = '__stop__'
+
+_buffers    = {
+    'queue' : (queue.Queue, multiprocessing.Queue),
+    'fifo'  : (queue.Queue, multiprocessing.Queue),
+    'stack' : (queue.LifoQueue, ),
+    'lifo'  : (queue.LifoQueue, ),
+    'priority'  : (PriorityQueue, multiprocessing.PriorityQueue),
+    'min_priority'  : (PriorityQueue, multiprocessing.PriorityQueue),
+    'max_priority'  : (PriorityQueue, multiprocessing.PriorityQueue),
 }
 
-def get_buffer(buffer, * args, ** kwargs):
+def get_buffer(buffer, maxsize = 0, use_multiprocessing = False):
+    if buffer is None: buffer = 'queue'
     if buffer is not None:
         if isinstance(buffer, str):
-            if buffer not in _queues:
-                raise ValueError('`buffer` is an unknown queue type :\n  Accepted : {}\n  Got : {}\n'.format(tuple(_queues.keys()), buffer))
-            buffer = _queues[buffer](* args, ** kwargs)
-        elif not isinstance(buffer, Queue):
-            raise ValueError('`buffer` must be a queue.Queue instance or subclass')
-    else:
-        buffer = Queue(* args, ** kwargs)
+            buffer = buffer.lower()
+            if buffer not in _buffers:
+                raise ValueError('`buffer` is an unknown queue type :\n  Accepted : {}\n  Got : {}\n'.format(tuple(_buffers.keys()), buffer))
+            
+            idx = 0 if not use_multiprocessing else 1
+            buffer = _buffers[buffer][idx](maxsize)
+        
+        elif not isinstance(buffer, (queues.Queue, multiprocessing.queues.Queue)):
+            raise ValueError('`buffer` must be a Queue instance or subclass')
+
     return buffer
 
 class Consumer(Producer):
     def __init__(self,
                  consumer,
-                 * args,
+                 *,
+                 
                  buffer     = None,
                  buffer_size    = 0,
                  timeout    = None,
@@ -54,11 +61,10 @@ class Consumer(Producer):
                  stateful   = False,
                  init_state = None,
                  
-                 batch_size = 1,
-                 
                  keep_result    = False,
                  
                  name = None,
+                 
                  ** kwargs
                 ):
         """
@@ -78,46 +84,38 @@ class Consumer(Producer):
             In case of `FIFO` buffer, the order will be the same as the `append` order
             In case of `LIFO` buffer, make sure to add items before starting the Consumer if you ant the exact reverse order, otherwise the 1st item will be consumed directly when appened and then it will be in the 1st position of result (and not the last one)
         """
-        if stateful and batch_size != 1:
-            raise ValueError('`batch_size = {} and stateful = True` are incompatible !\nWhen using a`stateful  consumer, the `batch_size` must be 1'.format(batch_size))
-        
-        if hasattr(consumer, '__doc__'): kwargs.setdefault('description', consumer.__doc__)
+        if hasattr(consumer, '__doc__'): kwargs.setdefault('doc', consumer.__doc__)
         
         super().__init__(generator = self, name = _get_thread_name(consumer, name), ** kwargs)
         
         self.consumer   = consumer
         self.buffer     = get_buffer(buffer, buffer_size)
         self.timeout    = timeout
-        self.buffer_type    = buffer
+        self.buffer_type    = buffer if buffer is not None else 'queue'
         
         self.stateful   = stateful
         self._state     = () if init_state is None else init_state
         
-        self.batch_size = batch_size
-        
         self.keep_result    = keep_result
         self._results       = []
         
-        self._index     = 0
+        self._in_index  = 0
+        self._out_index = 0
         self._stop_empty    = False
     
-    @property
-    def is_max_priority(self):
-        return self.buffer_type and 'min' not in self.buffer_type
+    stop_empty  = locked_property('stop_empty')
+    in_index    = locked_property('in_index')
+    out_index   = locked_property('out_index')
     
-    @property
-    def append_listeners(self):
-        return self._listeners.get(Event.APPEND, [])
-    
-    @property
-    def stop_empty(self):
-        with self.mutex_infos: return self._stop_empty
-
     @property
     def results(self):
         if not self.keep_result:
             raise RuntimeError("You must set `keep_result` to True to get results")
         return self._results.copy()
+    
+    @property
+    def empty(self):
+        with self.mutex: return self._in_index == self._out_index
     
     @property
     def node_text(self):
@@ -126,155 +124,137 @@ class Consumer(Producer):
         if self.batch_size != 1: des += "Batch size : {}\n".format(self.batch_size)
         return des
     
-    def __iter__(self):
-        return self
-    
-    def __next__(self):
-        logger.debug('[NEXT {}] Waiting for data'.format(self.name))
-        item = self.get()
+    def _apply_async(self, * args, kwds = {}, callback = None, priority = None, ** kwargs):
+        if kwargs and not kwds: kwds = kwargs
+        
+        with self.mutex:
+            if self._stopped: raise StoppedException()
+            self._in_index += 1
 
-        if item.stop or self.stopped: raise StopIteration()
-
-        logger.debug('[NEXT {}] Consuming data'.format(self.name))
-        if not self.stateful:
-            result = self.consumer(item.data, * item.args, ** item.kwargs)
-        else:
-            result, next_state = self.consumer(
-                item.data, * item.args, * self._state, ** item.kwargs
-            )
-            self._state = next_state
-        
-        self.buffer.task_done()
-        if self.keep_result: self._results.append(result)
-        return result
-    
-    def __call__(self, item, * args, ** kwargs):
-        """ Equivalent to `self.append` """
-        return self.append(item, * args, ** kwargs)
-
-    def empty(self):
-        with self.mutex_infos:
-            return self._size == self._index
-    
-    def get(self, raise_empty = False, ** kwargs):
-        with self.mutex_infos:
-            stop_empty = self._stop_empty
-            if stop_empty and self._size == self._index: return STOP_ITEM
-        
-        try:
-            if stop_empty:
-                kwargs['block'] = False
-                raise_empty     = False
-            elif self.timeout:
-                kwargs['timeout'] = self.timeout
-                raise_empty     = False
-
-            item = self.buffer.get(** kwargs)
-        except Empty as e:
-            logger.debug('[GET {}] Empty !'.format(self.name))
-            if raise_empty: raise e
-            return STOP_ITEM
-        
-        logger.debug('[GET {}] {}'.format(self.name, item))
-        return item
-    
-    def run(self, * args, ** kwargs):
-        if not self.run_main_thread: super().run(* args, ** kwargs)
-    
-    def extend_and_wait(self, items, * args, stop = False, tqdm = None, ** kwargs):
-        def append_result(item):
-            results.append(item)
-            if tqdm is not None: tqdm.update()
-        
-        def append_and_wake_up(item):
-            append_result(item)
-            event.set()
-        
-        if tqdm is not None: tqdm = tqdm(total = len(items), unit = 'item')
-        
-        results = []
-        event   = threading.Event()
-        
-        for i, item in enumerate(create_iterator(items)):
-            callback = append_result if i < len(items) - 1 else append_and_wake_up
-            self.append(item, * args, callback = callback, ** kwargs)
-        if not self.run_main_thread: event.wait()
-        
-        if stop: self.stop()
-        
-        return results
-        
-    def append_and_wait(self, item, * args, stop = False, ** kwargs):
-        def append_and_wake_up(item):
-            result.append(item)
-            event.set()
-        
-        result = []
-        event  = threading.Event()
-        
-        self.append(item, * args, callback = append_and_wake_up, ** kwargs)
-        if not self.run_main_thread: event.wait()
-        if stop: self.stop()
-        
-        return result[0]
-    
-    def extend(self, items, * args, ** kwargs):
-        return [self.append(item, * args, ** kwargs) for item in create_iterator(items)]
-    
-    def append(self, item, * args, priority = -1, callback = None, ** kwargs):
-        """ Add the item to the buffer (raise ValueError if `stop` has been called) """
-        if self.batch_size > 1 and len(args) + len(kwargs) != 0:
-            raise ValueError('When using `batch_size` > 1, args / kwargs in `append` must be empty ! Found :\n  Args : {}\n  Kwargs : {}'.format(args, kwargs))
-        
-        with self.mutex_infos:
-            if self.stopped:
-                raise StoppedException('Consumer stopped, you cannot add new items !')
-            idx = self._index
-            self._index += 1
-        
-        if not isinstance(item, Item):
-            item = Item(
-                data = item, args = args, kwargs = kwargs, index = idx, callback = callback,
-                priority = priority if not self.is_max_priority else -priority
-            )
-        else:
-            item = update_item(item, index = idx, clone = True)
-        
-        self.on_append(item)
-        self.buffer.put(item)
+        self.on_append(* args)
         
         if self.run_main_thread:
-            try:
-                self.on_item_produced(self.__next__())
-            except StopIteration:
-                self.stop()
-                raise StoppedException('Consumer stopped, you cannot add new items !')
+            result = self.consume((args, kwds, callback))
+            self.on_item_produced(result)
+            return result
         
-        return item
-
-    def stop(self, force = False, ** kwargs):
-        if self.stopped: return
-        if force: super().stop(** kwargs)
-        if self.run_main_thread: self.on_stop()
-        return self.stop_when_empty()
+        kwargs = {}
+        if 'priority' in self.buffer_type:
+            if 'max' in self.buffer_type and isinstance(priority, (int, float)):
+                priority = -priority
+            kwargs['priority'] = priority
+        
+        out = AsyncResult(callback = callback)
+        self.buffer.put((args, kwds, out), ** kwargs)
+        return out
     
-    def stop_when_empty(self):
-        with self.mutex_infos:
-            if self._stopped: return
-            self._stop_empty = True
-            logger.debug('[STATUS {}] Stop when empty !'.format(self.name))
-            if self.empty(): self.buffer.put(STOP_ITEM)
+    def _map_async(self, items, callback = None, ** kwargs):
+        results = []
+        for it in items:
+            if not isinstance(it, tuple): it = (it, )
+            results.append(self._apply_async(* it, kwds = kwargs, callback = callback))
+        return results
+    
+    def consume(self, item = None):
+        logger.debug('[Consume {}] Waiting item'.format(self.name))
+        if item is None:
+            item = self.buffer.get()
+            if item is None: raise StopIteration()
+        
+        args, kwargs, callback = item
+        
+        try:
+            logger.debug('[CONSUME {}] {}'.format(self.name, _item_to_str(args)))
+            if not self.stateful:
+                result = self.consumer(* args, ** kwargs)
+            else:
+                result, next_state = self.consumer(
+                    * args, * self._state, ** kwargs
+                )
+                self._state = next_state
+        except StopIteration:
+            raise StopIteration()
+        except Exception as e:
+            result = e
+        
+        if callback is not None: callback(result)
+        return result
+    
+    __iter__    = lambda self: self
+    
+    __next__    = consume
+    __call__    = _apply_async
+    append  = _apply_async
+    extend  = _map_async
+            
+    def run(self):
+        if self.run_main_thread:
+            self.on_start()
+        else:
+            super().run()
 
+    def extend_and_wait(self, items, tqdm = lambda x: x, ** kwargs):
+        return [res.get() for res in tqdm(self.extend(items, ** kwargs))]
+    
+    def append_and_wait(self, * args, ** kwargs):
+        return self.append(* args, ** kwargs).get()
+    
+    def on_item_produced(self, item):
+        if self.keep_result: self._results.append(item)
+        
+        super().on_item_produced(item)
+        
+        with self.mutex:
+            self._out_index += 1
+            if self._stop_empty and self._in_index == self._out_index:
+                logger.debug('[STOP {}] Stop when empty (in : {} - out : {})'.format(
+                    self.name, self._in_index, self._out_index
+                ))
+                self.stop()
+
+    def stop_when_empty(self):
+        if self._stop_empty or self._stopped or self._finished: return
+        self.stop_empty = True
+        if self.empty: self.stop()
+    
+    def stop(self):
+        if self._stopped or self._finished: return
+        if self.empty: self.buffer.put(None)
+        super().stop()
+        if self.run_main_thread: self.on_stop()
+    
     def join(self, * args, ** kwargs):
-        """ Stop the thread then wait its end (that all items have been consumed) """
         self.stop_when_empty()
         super().join(* args, ** kwargs)
+        
+class AsyncResult:
+    def __init__(self, callback = None):
+        self._callback  = callback
+        self._event = threading.Event()
+        self._result    = None
     
-    def wait(self, * args, ** kwargs):
-        """ Waits the Thread is finished (equivalent to `join`) """
-        return self.join(* args, ** kwargs)
-
-    def on_append(self, item):
-        logger.debug('[APPEND {}] {}'.format(self.name, item))
-        for l, infos in self.append_listeners:
-            l(item) if infos.get('pass_item', False) else l(item.data)
+    @property
+    def ready(self):
+        return self._event.is_set()
+    
+    def __call__(self, result):
+        self._result    = result
+        self._success   = not isinstance(result, Exception)
+        if self._callback is not None:
+            self._callback(self._result)
+        self._event.set()
+    
+    def wait(self, timeout = None):
+        self._event.wait(timeout)
+    
+    def get(self, timeout = None):
+        self.wait(timeout)
+        if not self.ready:
+            raise TimeoutError
+        if self._success:
+            return self._result
+        else:
+            raise self._result
+    
+    
+    

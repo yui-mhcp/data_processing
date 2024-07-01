@@ -12,15 +12,13 @@
 import os
 import copy
 import enum
-import queue
 import logging
 import functools
-import multiprocessing
 
-from typing import Optional, Any
+from keras import tree
 from threading import Thread, RLock
-from dataclasses import dataclass, field
 
+from utils.keras_utils import ops
 from utils.stream_utils import create_iterator
 from utils.generic_utils import get_enum_item, get_args, signature_to_str
 from utils.wrapper_utils import partial
@@ -38,28 +36,23 @@ class Event(enum.IntEnum):
     ITEM_PRODUCED   = 2
     STOP    = 3
 
-@dataclass(order = True)
-class Item:
-    data    : Any   = field(compare = False, repr = False)
-    priority    : Optional[Any] = -1
-    index       : Optional[int] = -1
-    
-    stop    : Optional[bool]    = field(compare = False, default = False)
-    
-    args    : Optional[tuple] = field(compare = False, default = (), repr = False)
-    kwargs  : Optional[dict]  = field(compare = False, default_factory = dict, repr = False)
-    
-    callback    : Optional[callable]    = field(compare = False, default = None, repr = False)
-
 ITEM_EVENTS = (Event.ITEM, Event.APPEND)
 
-STOP_ITEM   = Item(data = None, stop = True)
-_propagate_item_fields = ('index', 'priority', 'group', 'args', 'kwargs', 'metadata')
+def locked_property(name):
+    def getter(self):
+        with self.mutex: return getattr(self, '_' + name)
+    
+    def setter(self, value):
+        with self.mutex: setattr(self, '_' + name, value)
+    
+    return property(fget = getter, fset = setter)
 
-def update_item(item, clone = True, ** kwargs):
-    if clone: item = copy.copy(item)
-    for k, v in kwargs.items(): setattr(item, k, v)
-    return item
+def _item_to_str(it):
+    if isinstance(it, (list, tuple, dict)):
+        return tree.map_structure(_item_to_str, it)
+    elif ops.is_array(it):
+        return '<{} shape={} dtype={}>'.format(it.__class__.__name__, tuple(it.shape), it.dtype)
+    return it
 
 def _get_thread_name(generator, name):
     if name is not None: return name
@@ -79,23 +72,23 @@ class Producer(Thread):
     """
     def __init__(self,
                  generator,
-                 * args,
+                 *,
                  
-                 description    = None,
+                 doc    = None,
+                 
+                 daemon = False,
+                 run_main_thread    = False,
                  
                  consumers      = None,
-                 start_listeners    = None,
-                 append_listeners   = None,
-                 stop_listeners     = None,
-                 
-                 daemon     = False,
-                 run_main_thread    = False,
+                 start_listener     = None,
+                 append_listener    = None,
+                 item_listener      = None,
+                 stop_listener      = None,
                  
                  raise_if_error     = True,
                  stop_no_more_listeners = True,
                  
-                 name = None,
-                 ** kwargs
+                 name = None
                 ):
         """
             Constructor for the `Producer`
@@ -107,7 +100,7 @@ class Producer(Thread):
                 - description   : description for the `print()` and `plot()` methods
                 
                 - consumers : consumers to add
-                - {start / append / stop}_listeners  : listeners to add on the specific event
+                - {start / append / stop}_listener   : listeners to add on the specific event
                 
                 - run_main_thread   : whether to run in a separate Thread or not
                 - stop_no_more_listeners    : whether to call `self.stop` when the producer has lost all its consumers (note that if a producer (or consumer) has never had any consumer, this argument is ignored)
@@ -120,76 +113,58 @@ class Producer(Thread):
         Thread.__init__(self, name = _get_thread_name(generator, name), daemon = daemon)
 
         self.generator  = generator
-        self.description    = generator.__doc__ if not description and hasattr(generator, '__doc__') else description
+        
+        self.doc    = generator.__doc__ if not doc and hasattr(generator, '__doc__') else doc
+        
         self.run_main_thread    = run_main_thread
         self.raise_if_error     = raise_if_error
         self.stop_no_more_listeners = stop_no_more_listeners
 
         self._listeners     = {}
-        
-        self.mutex_infos    = RLock()
+
+        self.mutex  = RLock()
         self._stopped   = False
         self._finished  = False
-        self._size  = 0
+        self._count = 0
         
-        for (event, listeners) in zip(
-            [Event.START, Event.APPEND, Event.STOP],
-            [start_listeners, append_listeners, stop_listeners]):
-            
-            if listeners is None: continue
-            if not isinstance(listeners, (list, tuple)): listeners = [listeners]
-            for l in listeners: self.add_listener(l, event = event)
+        for event, listeners in [
+            (Event.START, start_listener),
+            (Event.APPEND, append_listener),
+            (Event.ITEM, item_listener),
+            (Event.STOP, stop_listener)
+        ]:
+            self.add_listener(listeners, event = event)
         
-        if consumers is not None:
-            if not isinstance(consumers, (list, tuple)): consumers = [consumers]
-            for c in consumers: self.add_consumer(c, start = True, link_stop = True)
-    
-    @property
-    def size(self):
-        with self.mutex_infos: return self._size
+        if consumers is not None: self.add_consumer(consumers, start = True, link_stop = True)
 
-    @property
-    def stopped(self):
-        with self.mutex_infos: return self._stopped
+    size    = property(lambda self: self._count)
     
-    @property
-    def finished(self):
-        with self.mutex_infos: return self._finished
+    stopped = locked_property('stopped')
+    finished    = locked_property('finished')
 
-    @property
-    def start_listeners(self):
-        return self._listeners.get(Event.START, [])
-    
-    @property
-    def item_listeners(self):
-        return self._listeners.get(Event.ITEM, [])
-
-    @property
-    def stop_listeners(self):
-        return self._listeners.get(Event.STOP, [])
+    start_listeners = property(lambda self: self._listeners.get(Event.START, []))
+    item_listeners  = property(lambda self: self._listeners.get(Event.ITEM, []))
+    stop_listeners  = property(lambda self: self._listeners.get(Event.STOP, []))
+    append_listeners    = property(lambda self: self._listeners.get(Event.APPEND, []))
     
     @property
     def str_status(self):
         if self.run_main_thread:    return '/'
-        elif self.is_alive():   return 'alive'
-        elif self.stopped:      return 'stopped'
+        elif self.is_alive():   return 'alive' if not self.stopped else 'stopped'
         elif self.finished:     return 'finished'
         else:   return 'not started'
     
     @property
     def node_text(self):
         des = "{} {}\n".format(self.__class__.__name__, self.name)
-        if self.description: des += "{}\n".format(self.description)
-        des += "Thread status : {}\n".format(self.str_status)
+        if self.doc: des += "{}\n".format(self.doc)
+        des += "Status : {}\n".format(self.str_status)
         des += "# items produced : {}\n".format(self.size)
         return des
         
     def __iter__(self):
-        self._iterator  = self.generator() if callable(self.generator) else create_iterator(self.generator)
+        self._iterator  = create_iterator(self.generator)
         return self._iterator
-    
-    def __len__(self):
-        return len(self.generator) if self.generator is not self and hasattr(self.generator, '__len__') else self.size
     
     def __str__(self):
         des = self.node_text
@@ -206,7 +181,8 @@ class Producer(Thread):
         self.on_start()
         for item in self:
             if self.stopped:
-                if hasattr(self._iterator, 'close'): self._iterator.close()
+                if hasattr(self, '_iterator') and hasattr(self._iterator, 'close'):
+                    self._iterator.close()
                 break
             self.on_item_produced(item)
         self.on_stop()
@@ -217,18 +193,19 @@ class Producer(Thread):
         return self
 
     def stop(self):
-        with self.mutex_infos:
-            self._stopped = True
+        logger.debug('[STOP {}]'.format(self.name))
+        self.stopped = True
         
-        if isinstance(self.generator, (queue.Queue, multiprocessing.queues.Queue)):
-            self.generator.put(STOP_ITEM)
+        if hasattr(self.generator, 'qsize') and self.generator.qsize() == 0:
+            self.generator.put(None)
 
     def add_listener(self,
                      listener,
                      * args,
+                     
                      event  = Event.ITEM,
                      name   = None,
-                     pass_item  = False,
+
                      ** kwargs
                     ):
         """
@@ -238,6 +215,12 @@ class Producer(Thread):
             
             /!\ Listeners are executed in the Producer's thread so make sure to use `Consumer`'s running on separated threads to ensure a correct parallelization
         """
+        if listener is None: return
+        
+        if isinstance(listener, list):
+            for l in listener: self.add_listener(l, event = event)
+            return
+        
         if not callable(listener):
             raise ValueError('`listener` must be a callable ! Got type {}'.format(type(listener)))
 
@@ -251,18 +234,22 @@ class Producer(Thread):
             ))
         
         infos = {
-            'name'      : _get_listener_name(listener) if name is None else name,
-            'stopped'   : False,
-            'pass_item' : pass_item
+            'name' : _get_listener_name(listener) if name is None else name
         }
         
         if event in ITEM_EVENTS:
-            if not get_args(listener):
-                raise RuntimeError('The listener {} must accept at least 1 positional argument !\n  Signature : {}'.format(listener, signature_to_str(listener)))
+            try:
+                if not get_args(listener):
+                    raise RuntimeError('The listener {} must accept at least 1 positional argument !\n  Signature : {}'.format(listener, signature_to_str(listener)))
+            except ValueError:
+                pass
+            
             if isinstance(listener, Producer): infos['consumer_class'] = listener
+            
             if args or kwargs:
+                _fn = listener
                 listener = functools.wraps(listener)(
-                    lambda item, * a, ** kw: listener(item, * (args + a), ** {** kwargs, ** kw})
+                    lambda item, * a, ** kw: _fn(item, * (args + a), ** {** kwargs, ** kw})
                 )
         elif args or kwargs:
             listener = partial(listener, * args, ** kwargs)
@@ -281,16 +268,24 @@ class Producer(Thread):
                 - args / kwargs : passed to the Consumer's constructor (if called)
             Return : the `Consumer` instance
         """
+        if isinstance(consumer, list):
+            return [
+                self.add_consumer(c, start = start, link_stop = link_stop, ** kwargs)
+                for c in consumer
+            ]
+        
         from .consumer import Consumer
         
         if not isinstance(consumer, Consumer): consumer = Consumer(consumer, * args, ** kwargs)
         
-        self.add_listener(consumer, event = Event.ITEM, pass_item = True)
+        self.add_listener(consumer, event = Event.ITEM)
         if link_stop:
             self.add_listener(
-                consumer.stop, event = Event.STOP, name = 'stop {}'.format(consumer.name)
+                consumer.stop_when_empty, event = Event.STOP, name = 'stop {}'.format(consumer.name)
             )
-            consumer.add_listener(self.stop, event = Event.STOP, name = 'stop {}'.format(self.name))
+            consumer.add_listener(
+                self.stop, event = Event.STOP, name = 'stop {}'.format(self.name)
+            )
         if start and not consumer.is_alive(): consumer.start()
 
         return consumer
@@ -323,45 +318,39 @@ class Producer(Thread):
     def on_stop(self):
         """ Function called when stopping the thread """
         logger.debug('[STATUS {}] Stop'.format(self.name))
-        with self.mutex_infos: self._stopped, self._finished = True, True
-        self.stop()
+        self.finished = True
         for l, _ in self.stop_listeners: l()
+
+    def on_append(self, item):
+        logger.debug('[APPEND {}] {}'.format(self.name, _item_to_str(item)))
+        for l, _ in self.append_listeners: l(item)
 
     def on_item_produced(self, item):
         """ Function called when a new item is generated """
-        with self.mutex_infos:
-            idx = self._size
-            self._size += 1
-        
-        if not isinstance(item, Item):
-            item = Item(data = item, index = idx)
-        
-        logger.debug('[ITEM PRODUCED {}] {}'.format(self.name, item))
-        if item.stop:
-            self.stop()
-            return
-        
-        if item.callback is not None: item.callback()
+        logger.debug('[ITEM PRODUCED {}] {}'.format(self.name, _item_to_str(item)))
+
+        self._count += 1
         
         to_remove = []
         consumers = self.item_listeners
         for i, (consumer, infos) in enumerate(consumers):
-            if infos.get('stopped', False): continue
             try:
-                consumer(item) if infos.get('pass_item', False) else consumer(
-                    item.data, * item.args, ** item.kwargs
-                )
+                stopped = getattr(consumer, 'stopped', False)
+                if not stopped: consumer(item)
             except Exception as e:
-                print(e)
-                stopped = isinstance(e, StoppedException)
-                logger.error('[CONSUMER {} {}] : consumer {}{}'.format(
-                    'STOPPED' if stopped else 'ERROR', self.name, infos['name'],
-                    '' if stopped else '\n{}'.format(e)
-                ))
-                to_remove.append(i)
+                stopped = isinstance(e, (StoppedException, StopIteration))
+                logger.log(
+                    logging.DEBUG if stopped else logging.ERROR,
+                    '[CONSUMER {} {}] : consumer {}{}'.format(
+                        'STOPPED' if stopped else 'ERROR', self.name, infos['name'],
+                        '' if stopped else '\n  {}'.format(e)
+                    )
+                )
                 if self.raise_if_error and not stopped:
                     self.stop()
                     raise e
+            
+            if stopped: to_remove.append(i)
         
         if self.stop_no_more_listeners and consumers and len(to_remove) == len(consumers):
             logger.debug('[STATUS {}] no more consumers, stopping the thread'.format(self.name))
@@ -386,6 +375,7 @@ class Producer(Thread):
             return True
         
         import graphviz as gv
+        
         if graph is None:
             if name is None: name = filename if filename else 'Graph'
             graph = gv.Digraph(name = name, filename = filename)

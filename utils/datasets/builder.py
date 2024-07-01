@@ -15,8 +15,11 @@ import logging
 import numpy as np
 import pandas as pd
 
+from keras import tree
 from sklearn.utils import shuffle as sklearn_shuffle
 from sklearn.model_selection import train_test_split as sklearn_train_test_split
+
+from utils.stream_utils import create_iterator
 
 logger  = logging.getLogger(__name__)
 
@@ -29,7 +32,9 @@ def prepare_dataset(data,
                     process_fn  = None,
                     augment_fn  = None,
                     process_batch_fn    = None,
-                     
+                    
+                    map_fn  = None,
+
                     cache       = True,
                     shuffle     = False,
                     prefetch    = True,
@@ -64,6 +69,8 @@ def prepare_dataset(data,
     if dataset is None: return None
     
     import tensorflow as tf
+    
+    if map_fn is not None: process_fn = map_fn
     
     if shuffle_size is None:        shuffle_size = tf.data.experimental.cardinality(dataset)
     if prefetch_size is None:       prefetch_size = tf.data.AUTOTUNE
@@ -145,8 +152,6 @@ def build_tf_dataset(data, as_dict = True, is_rectangular = True, siamese = Fals
         dataset = data
     elif isinstance(data, (list, tuple, dict, np.ndarray)):
         dataset = tf.data.Dataset.from_tensor_slices(data)
-    elif isinstance(data, np.ndarray):
-        dataset = tf.data.Dataset.from_tensor_slices(data)
     elif isinstance(data, pd.DataFrame):
         if siamese:
             dataset = build_siamese_dataset(data, ** kwargs)
@@ -157,6 +162,12 @@ def build_tf_dataset(data, as_dict = True, is_rectangular = True, siamese = Fals
                 dataset = tf.data.experimental.from_list(data.to_dict('records'))
         else:
             dataset = tf.data.Dataset.from_tensor_slices(data.values)
+    elif isinstance(data, keras.utils.PyDataset) and hasattr(data, 'output_signature'):
+        dataset = tf.data.Dataset.from_generator(
+            create_iterator(data), output_signature = tree.map_structure(
+                lambda s: tf.TensorSpec(shape = s.shape, dtype = s.dtype), data.output_signature
+            )
+        )
     elif isinstance(data, str):
         if os.path.isdir(data):
             dataset = tf.data.Dataset.list_files(data + '/*')
@@ -167,9 +178,10 @@ def build_tf_dataset(data, as_dict = True, is_rectangular = True, siamese = Fals
         else:
             raise ValueError('This file format is not convertible to `tf.data.Dataset` : {}'.format(data))
     else:
-        logger.info('The `data` format is not supported by this custom function. Trying the `keras` `get_data_adapter` function...')
+        if not isinstance(data, keras.utils.PyDataset):
+            logger.info('The `data` format is not supported by this custom function. Trying the `keras` `get_data_adapter` function...')
         
-        from keras.src.trainers.data_adapter import get_data_adapter
+        from keras.src.trainers.data_adapters import get_data_adapter
         
         dataset = get_data_adapter(data).get_tf_dataset()
         

@@ -22,15 +22,15 @@ logger      = logging.getLogger(__name__)
 @image_dataset_wrapper(
     name = 'icdar', task = [Task.TEXT_DETECTION, Task.OCR], directory = '{}/ICDAR'
 )
-def preprocess_icdar_annots(directory,
-                            *,
-                            
-                            year    = 2019,
-                            script  = 'latin',
-                            tqdm    = lambda x: x,
-                            
-                            ** kwargs
-                           ):
+def load_data(directory,
+              *,
+
+              year    = 2019,
+              script  = 'latin',
+              tqdm    = lambda x: x,
+
+              ** kwargs
+             ):
     from utils.image.bounding_box import BoxFormat, convert_box_format
     
     path    = os.path.join(directory, str(year), 'gt', '*.txt')

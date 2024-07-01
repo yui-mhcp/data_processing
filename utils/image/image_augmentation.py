@@ -50,13 +50,13 @@ def augment_image(image, method, prct = 0.25, ** kwargs):
     return image
 
 
-@augment_image.dispatch
+@augment_image.dispatch('flip_vertical')
 @tensorflow_only_function
 def flip_vertical(image, ** kwargs):
     import tensorflow as tf
     return tf.image.flip_up_down(image)
 
-@augment_image.dispatch
+@augment_image.dispatch('flip_horizontal')
 @tensorflow_only_function
 def flip_horizontal(image, ** kwargs):
     import tensorflow as tf

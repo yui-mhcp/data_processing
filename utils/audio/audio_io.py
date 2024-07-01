@@ -158,7 +158,7 @@ def get_audio_player(create = False):
     with _player_lock:
         if create and (_audio_player is None or _audio_player.stopped):
             _audio_player = Consumer(
-                _play, daemon = True, stop_listeners = _finalize
+                _play, daemon = True, stop_listener = _finalize
             ).start()
         
         return _audio_player

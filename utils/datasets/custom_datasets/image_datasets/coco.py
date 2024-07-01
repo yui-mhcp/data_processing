@@ -36,19 +36,19 @@ logger      = logging.getLogger(__name__)
         'annotations_file'  : 'annotations/instances_val2017.json'
     }
 )
-def preprocess_COCO_annots(directory,
-                           annotation_file,
-                           
-                           images_dir   = None,
-                           
-                           keep_labels  = True,
-                           keep_boxes   = True,
-                           keep_caption = True,
-                           keep_segmentation    = False,
-                           use_supercategory_as_label = False,
-                           
-                           ** kwargs
-                          ):
+def load_data(directory,
+              annotation_file,
+
+              images_dir   = None,
+
+              keep_labels  = True,
+              keep_boxes   = True,
+              keep_caption = True,
+              keep_segmentation    = False,
+              use_supercategory_as_label = False,
+
+              ** kwargs
+             ):
     images_dir  = os.path.join(directory, images_dir) if images_dir else directory
     annotation_file = os.path.join(directory, annotation_file)
     

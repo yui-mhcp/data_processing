@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from .keras_utils.gpu_utils import *
 from .hparams import HParams
 from .distance import *
 from .threading import *

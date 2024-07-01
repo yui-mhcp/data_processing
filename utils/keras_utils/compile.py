@@ -362,7 +362,13 @@ def execute_eagerly(fn  = None,
                     args    = args_and_kwargs[:n]
                     keys    = convert_to_str(args_and_kwargs[n])
                     kwargs  = {k : v for k, v in zip(keys, args_and_kwargs[n + 1 :])}
-                    return function(* args, ** kwargs)
+                    
+                    out = function(* args, ** kwargs)
+                    if isinstance(Tout, list) and isinstance(out, (list, tuple)):
+                        out = [ops.cast(out_i, dtype) for out_i, dtype in zip(out, Tout)]
+                    else:
+                        out = ops.cast(out, Tout if not isinstance(Tout, list) else Tout[0])
+                    return out
 
                 keys    = list(kwargs.keys())
                 vals    = [kwargs[k] for k in keys]
@@ -395,6 +401,8 @@ def execute_eagerly(fn  = None,
     if signature is not None:
         Tout    = tree.map_structure(lambda s: s.dtype, signature)
         Sout    = tree.map_structure(lambda s: s.shape, signature)
+    elif isinstance(Tout, tuple):
+        Tout = list(Tout)
     
     if not isinstance(default_key, (list, tuple)): default_key = [default_key]
     return wrapper if fn is None else wrapper(fn)

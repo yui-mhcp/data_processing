@@ -22,15 +22,15 @@ logger      = logging.getLogger(__name__)
     train   = {'directory' : '{}/Wider_Face', 'subset' : 'train'},
     valid   = {'directory' : '{}/Wider_Face', 'subset' : 'val'}
 )
-def preprocess_wider_annots(directory,
-                            *,
-                            
-                            subset  = 'train',
-                            label_name  = 'face',
-                            keep_invalid    = False,
-                            add_box_infos   = False,
-                            ** kwargs
-                           ):
+def load_data(directory,
+              *,
+
+              subset  = 'train',
+              label_name  = 'face',
+              keep_invalid    = False,
+              add_box_infos   = False,
+              ** kwargs
+             ):
     """
         Arguments :
             - filename  : the annotation filename

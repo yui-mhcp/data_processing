@@ -26,11 +26,7 @@ logger      = logging.getLogger(__name__)
     images_dir      = 'JPEGImages',
     annotations_dir = 'Annotations'
 )
-def preprocess_VOC_annots(directory,
-                          images_dir,
-                          annotations_dir,
-                          ** kwargs
-                         ):
+def load_data(directory, images_dir, annotations_dir, ** kwargs):
     """
         Arguments :
             - directory : main directory

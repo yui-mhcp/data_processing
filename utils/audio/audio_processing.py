@@ -16,7 +16,7 @@ import librosa.util as librosa_util
 from scipy.signal import get_window
 
 from utils.keras_utils import ops
-from utils.generic_utils import get_enum_item
+from utils.generic_utils import get_enum_item, convert_to_str
 from utils.wrapper_utils import dispatch_wrapper
 
 _trimming_methods = {}
@@ -38,6 +38,7 @@ def trim_silence(audio, method = 'window', ** kwargs):
         Return :
             - trimmed_audio : `np.ndarray`, the audio with silence trimmed
     """
+    method = convert_to_str(method)
     return _trimming_methods.get(method, trim_silence_simple)(audio, ** kwargs)
 
 @trim_silence.dispatch
@@ -82,7 +83,8 @@ def trim_silence_window(audio,
             - kwargs    : unused
         Returns : the trimmed audio
     """
-    assert mode in ('start', 'end', 'start_end')
+    mode = convert_to_str(mode)
+    assert mode in ('start', 'end', 'start_end'), 'Invalid mode : {}'.format(mode)
     window_type = get_enum_item(window_type, WindowType)
     
     if isinstance(window_length, float): window_length = int(window_length * rate)

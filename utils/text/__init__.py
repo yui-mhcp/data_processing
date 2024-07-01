@@ -84,10 +84,8 @@ def get_encoder(lang = None, text_encoder = None, ** kwargs):
         
     elif isinstance(text_encoder, str):
         try:
-            from models import _pretrained_models_folder
-            model_encoder_file = os.path.join(
-                _pretrained_models_folder, text_encoder, 'saving', 'text_encoder.json'
-            )
+            from models import get_model_dir
+            model_encoder_file = get_model_dir(text_encoder, 'saving', 'text_encoder.json')
         except:
             model_encoder_file = None
         

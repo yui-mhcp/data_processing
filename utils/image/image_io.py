@@ -25,6 +25,7 @@ import pandas as pd
 from loggers import timer, time_logger
 from utils.keras_utils import TensorSpec, ops, graph_compile
 from utils import Producer, Consumer, time_to_string
+from utils.threading import Producer, Consumer
 from utils.image.image_utils import resize_image
 
 logger  = logging.getLogger(__name__)
@@ -322,10 +323,9 @@ def stream_camera(cam_id    = 0,
     
     def play_audio_on_first_frame(frame, first = True):
         """ Runs the audio once the first frame has been displayed """
-        if first:
-            from utils.audio import audio_io
-            audio_io.play_audio(cam_id, blocking = False)
-        return None, (False, )
+        from utils.audio import audio_io
+        audio_io.play_audio(cam_id, blocking = False)
+        raise StopIteration()
     
     # variable initialization
     if max_time <= 0:   max_time = None
@@ -368,10 +368,14 @@ def stream_camera(cam_id    = 0,
     
     prod = Producer(frame_generator(
         cap, fps = fps, max_time = max_time, nb_frames = nb_frames, return_index = add_index, add_copy = add_copy, frames_step = frames_step, frames_offset = frames_offset
-    ), run_main_thread = not multi_threaded, stop_listeners = cap.release)
+    ), run_main_thread = not multi_threaded, stop_listener = cap.release)
     
     transformer = prod.add_consumer(
-        transform_fn, link_stop = True, run_main_thread = not multi_threaded, buffer_size = buffer_size, ** kwargs
+        transform_fn,
+        link_stop   = True,
+        buffer_size = buffer_size,
+        run_main_thread = not multi_threaded,
+        ** kwargs
     ) if transform_fn is not None else prod
     
     if transformer_prod is None: transformer_prod = transformer
@@ -388,8 +392,8 @@ def stream_camera(cam_id    = 0,
         )
         # Creates the video-writer consumer
         writer_cons     = transformer_prod.add_consumer(
-            write_video_frame, link_stop = True, start = True, run_main_thread = not multi_threaded,
-            stop_listeners = video_writer.release
+            write_video_frame, link_stop = True, run_main_thread = not multi_threaded,
+            stop_listener = video_writer.release
         )
         # Adds a listener to copy the video file's audio to the output file (if expected)
         if copy_audio and isinstance(cam_id, str):
@@ -402,15 +406,16 @@ def stream_camera(cam_id    = 0,
     if show:
         cons = transformer_prod.add_consumer(
             show_frame,
-            start = True, link_stop = True, stateful = True,
+            start = True,
+            link_stop = True,
+            stateful = True,
             run_main_thread = not multi_threaded,
-            start_listeners = lambda: cv2.namedWindow(display_name, imshow_flags),
-            stop_listeners  = cv2.destroyAllWindows
+            stop_no_more_listeners  = False,
+            start_listener  = lambda: cv2.namedWindow(display_name, imshow_flags),
+            stop_listener   = cv2.destroyAllWindows
         )
         if play_audio and output_fps != -1 and isinstance(cam_id, str):
-            cons.add_consumer(
-                play_audio_on_first_frame, stateful = True, run_main_thread = True
-            )
+            cons.add_listener(play_audio_on_first_frame)
     
     
     ####################
