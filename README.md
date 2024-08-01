@@ -24,6 +24,7 @@ Check the provided notebooks to have an overview of the available features !
 │   ├── test_utils_compile.py
 │   ├── test_utils_clustering.py
 │   ├── test_utils_distance.py
+│   ├── test_utils_embeddings.py
 │   ├── test_utils_image.py
 │   ├── test_utils_ops.py
 │   ├── test_utils_text.py
@@ -70,25 +71,39 @@ Check the provided notebooks to have an overview of the available features !
 │   ├── keras_utils             : custom keras operations (see `example_custom_operations.ipynb`)
 │   │   ├── ops                     : interfaces the main keras / numpy operations
 │   │   │   ├── __init__.py
-│   │   │   ├── array_ops.py
-│   │   │   ├── loop_ops.py
-│   │   │   ├── math_ops.py
-│   │   │   ├── nn_ops.py
+│   │   │   ├── core.py
+│   │   │   ├── image.py
+│   │   │   ├── linalg.py
+│   │   │   ├── math.py
+│   │   │   ├── nn.py
+│   │   │   ├── numpy.py
 │   │   │   ├── ops_builder.py
 │   │   │   └── random.py
 │   │   ├── __init__.py
 │   │   ├── compile.py          : custom graph compilation features
 │   │   └── gpu_utils.py        : (experimental) custom gpu features
+│   ├── search              : utilities related to information retrieval
+│   │   ├── vectors
+│   │   │   ├── __init__.py
+│   │   │   ├── base_vectors_db.py  : BaseVectorsDB abstraction class
+│   │   │   └── dense_vectors.py    : DenseVectors class
 │   ├── text                : text-related features
 │   │   ├── abreviations
 │   │   │   └── en.json
 │   │   ├── document_parser         : text extraction from documents
+│   │   │   ├── pdf_parser
+│   │   │   │   ├── __init__.py         : main parsing method
+│   │   │   │   ├── combination.py      : subset of utils/image/bounding_box/combination.py
+│   │   │   │   ├── pdfminer_parser.py  : parser based on the pdfminer extraction library
+│   │   │   │   ├── post_processing.py  : post processing for pypdfium2_parser
+│   │   │   │   ├── pypdf_parser.py     : parser based on the pypdf extraction library
+│   │   │   │   └── pypdfium2_parser.py : parser based on the pypdfium2 extraction library
 │   │   │   ├── __init__.py
-│   │   │   ├── docx_parser.py
+│   │   │   └── docx_parser.py
 │   │   │   ├── html_parser.py
+│   │   │   └── md_parser.py
 │   │   │   ├── parser.py
 │   │   │   ├── parser_utils.py
-│   │   │   ├── pdf_parser.py
 │   │   │   └── txt_parser.py
 │   │   ├── __init__.py
 │   │   ├── byte_pair_encoding.py   : BPE implementation
@@ -214,6 +229,7 @@ The `utils/{audio / image / text}` modules are not loaded by default, meaning th
 - [x] Support `sentencepiece` encoders
 - [x] Extract text from documents
     - [x] `.txt`
+    - [x] `.md`
     - [x] `.pdf`
     - [x] `.docx`
     - [x] `.html`
@@ -221,7 +237,7 @@ The `utils/{audio / image / text}` modules are not loaded by default, meaning th
 - [x] Implement token-based logits masking
 - [x] Implement batch text encoding
 - [x] Add custom tokens to `TextEncoder`
-- [ ] Implement CTC-decoding in keras 3 (µalready implemented in `keras 3.3`*)
+- [x] Implement CTC-decoding in keras 3 (µalready implemented in `keras 3.3`*)
 
 ### Generic utilities
 

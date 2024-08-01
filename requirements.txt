@@ -1,10 +1,10 @@
 Unidecode
 ffmpeg_python
-imageio
+graphviz
+keras
 librosa
 matplotlib
 num2words
-numpy
 opencv_python
 pandas
 pydub
@@ -13,4 +13,3 @@ requests
 sounddevice
 tqdm
 umap_learn
-keras

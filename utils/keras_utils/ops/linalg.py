@@ -9,16 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .hparams import HParams
-from .distance import *
-from .threading import *
-from .embeddings import *
-from .file_utils import *
-from .plot_utils import *
-from .pandas_utils import *
-from .stream_utils import *
-from .generic_utils import *
-from .sequence_utils import *
-from .comparison_utils import *
-from .wrapper_utils import *
-from .keras_utils.gpu_utils import *
+from .ops_builder import build_op
+
+__all__ = ['cholesky', 'det', 'eig', 'eigh', 'inv', 'lstsq', 'lu_factor', 'qr', 'solve', 'solve_triangular']
+
+globals().update({k : build_op(k, disable_np = True) for k in __all__})

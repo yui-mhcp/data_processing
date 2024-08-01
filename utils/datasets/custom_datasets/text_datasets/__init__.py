@@ -9,16 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .hparams import HParams
-from .distance import *
-from .threading import *
-from .embeddings import *
-from .file_utils import *
-from .plot_utils import *
-from .pandas_utils import *
-from .stream_utils import *
-from .generic_utils import *
-from .sequence_utils import *
-from .comparison_utils import *
-from .wrapper_utils import *
-from .keras_utils.gpu_utils import *
+import os
+import importlib
+
+for module in os.listdir(__path__[0]):
+    if module.startswith(('_', '.')) or '_old' in module: continue
+    importlib.import_module(__package__ + '.' + module.replace('.py', ''))

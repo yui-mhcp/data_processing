@@ -9,16 +9,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .hparams import HParams
-from .distance import *
-from .threading import *
-from .embeddings import *
-from .file_utils import *
-from .plot_utils import *
-from .pandas_utils import *
-from .stream_utils import *
-from .generic_utils import *
-from .sequence_utils import *
-from .comparison_utils import *
-from .wrapper_utils import *
-from .keras_utils.gpu_utils import *
+from .base_vectors_db import BaseVectorsDB
+from utils.keras_utils import ops
+
+class DenseVectors(BaseVectorsDB):
+    @property
+    def shape(self):
+        return self.vectors.shape
+    
+    def append_vectors(self, vectors):
+        self.vectors = ops.concat([self.vectors, vectors], axis = 0)
+    
+    def top_k(self, query, k = 10, ** kwargs):
+        scores  = self.compute_scores(query, ** kwargs)
+        
+        scores, indices = ops.top_k(scores, k)
+        return indices, scores
+    
+    
+    
