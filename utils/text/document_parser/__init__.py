@@ -20,6 +20,6 @@ from .html_parser import _wiki_cleaner
 def __load():
     for module in glob.glob(__package__.replace('.', os.path.sep) + '/*_parser*'):
         if os.path.basename(module).startswith(('.', '_')): continue
-        importlib.import_module(module.replace(os.path.sep, '.').replace('.py', ''))
+        importlib.import_module(module.replace('.py', '').replace(os.path.sep, '.'))
 
 __load()
