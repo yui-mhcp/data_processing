@@ -9,158 +9,144 @@ Check the provided notebooks to have an overview of the available features !
 ```bash
 ├── example_data        : data used for the demonstrations
 ├── loggers             : custom utilities for the `logging` module
-│   ├── utils       : subset of the utils module to make loggers fully independant
-│   ├── __init__.py         : defines useful utilities to control `logging`
-│   ├── telegram_handler.py : custom logger using the telegram bot api
-│   ├── time_logging.py     : custom timer features
-│   └── tts_handler.py      : custom logger using the Text-To-Speech models
-├── unitests            : custom unit-testing for the different `utils` modules
-│   ├── __init__.py
-│   ├── test_custom_objects.py  : not executed in this project (requires `custom_train_objects`)
-│   ├── test_layers_masking.py  : not executed in this project (requires `custom_layers`)
-│   ├── test_transformers.py    : test `transformers.AutoTokenizer` convertion to `TextEncoder`
-│   ├── test_utils_audio.py
-│   ├── test_utils_boxes.py
-│   ├── test_utils_compile.py
-│   ├── test_utils_clustering.py
-│   ├── test_utils_distance.py
-│   ├── test_utils_embeddings.py
-│   ├── test_utils_image.py
-│   ├── test_utils_ops.py
-│   ├── test_utils_text.py
-│   └── test_utils_threading.py
+│   ├── __init__.py         : defines useful utilities to control `logging`
+│   ├── telegram_handler.py : custom logger using the telegram bot api
+│   ├── time_logging.py     : custom timer features
+│   └── tts_handler.py      : custom logger using the Text-To-Speech models
+├── tests               : custom unit-testing for the different modules
+│   ├── data               : test data files
+│   ├── __reproduction     : expected output files for reproducibility tests
+│   ├── test_custom_train_objects.py
+│   ├── test_utils_audio.py
+│   ├── test_utils_boxes.py
+│   ├── test_utils_compile.py
+│   ├── test_utils_distance.py
+│   ├── test_utils_embeddings.py
+│   ├── test_utils_files.py
+│   ├── test_utils_image.py
+│   ├── test_utils_keras.py
+│   ├── test_utils_ops.py
+│   ├── test_utils_sequence.py
+│   ├── test_utils_stream.py
+│   └── test_utils_text.py
 ├── utils
-│   ├── audio                   : audio utilities
-│   │   ├── __init__.py
-│   │   ├── audio_annotation.py     : annotation features for new TTS/STT dataset creation
-│   │   ├── audio_augmentation.py   : augmentation methods for audio / mel data
-│   │   ├── audio_io.py             : audio loading / writing
-│   │   ├── audio_processing.py     : audio normalization / processing
-│   │   ├── audio_search.py         : custom search in audio / video based on transcript
-│   │   ├── mkv_utils.py            : processing for .mkv video format
-│   │   ├── noisereducev1.py        : maintained version of the old `noisereduce` library
-│   │   └── stft.py                 : implementations of various mel-spectrogram methods
-│   ├── distance                : distance / similarity functions
-│   │   ├── __init__.py
-│   │   ├── clustering.py           : clustering wrappers / base features
-│   │   ├── distance_method.py      : distance / similarity metrics computation
-│   │   ├── kmeans_method.py        : K-Means implementation
-│   │   ├── knn_method.py           : K-Nearest Neighbor implementation
-│   │   ├── label_propagation_method.py : custom clustering algorithm
-│   │   ├── spectral_clustering_method.py   : spectral-clustering implementation
-│   │   └── text_distance_method.py     : text-based similarity metrics (e.g., F1)
-│   ├── image                   : image features
-│   │   ├── bounding_box            : features for bounding box manipulation (for object detection)
-│   │   │   ├── __init__.py
-│   │   │   ├── combination.py          : (experimental) combines group of boxes
-│   │   │   ├── converter.py            : box convertion format
-│   │   │   ├── iou.py                  : Intersection over Union implementation
-│   │   │   ├── locality_aware_nms.py   : (experimental) LA-NMS implementation
-│   │   │   ├── non_max_suppression.py  : (experimental) non-max suppression (NMS) implementation
-│   │   │   ├── polygons.py             : polygon manipulation for the EAST model
-│   │   │   ├── processing.py           : box processing
-│   │   │   └── visualization.py        : box extraction / drawing
-│   │   ├── __init__.py
-│   │   ├── custom_cameras.py       : custom camera for the HTTPScreenMirror app
-│   │   ├── image_augmentation.py   : image augmentation methods
-│   │   ├── image_io.py             : image loading / writing / camera streaming features
-│   │   ├── image_normalization.py  : normalization schema
-│   │   ├── image_utils.py          : custom image functions (resizing, padding, ...)
-│   │   ├── mask_utils.py           : masking utilities
-│   │   └── video_utils.py          : (experimental) basic functions for video manipulation
-│   ├── keras_utils             : custom keras operations (see `example_custom_operations.ipynb`)
-│   │   ├── ops                     : interfaces the main keras / numpy operations
-│   │   │   ├── __init__.py
-│   │   │   ├── core.py
-│   │   │   ├── image.py
-│   │   │   ├── linalg.py
-│   │   │   ├── math.py
-│   │   │   ├── nn.py
-│   │   │   ├── numpy.py
-│   │   │   ├── ops_builder.py
-│   │   │   └── random.py
-│   │   ├── __init__.py
-│   │   ├── compile.py          : custom graph compilation features
-│   │   └── gpu_utils.py        : (experimental) custom gpu features
-│   ├── search              : utilities related to information retrieval
-│   │   ├── vectors
-│   │   │   ├── __init__.py
-│   │   │   ├── base_vectors_db.py  : BaseVectorsDB abstraction class
-│   │   │   └── dense_vectors.py    : DenseVectors class
-│   ├── text                : text-related features
-│   │   ├── abreviations
-│   │   │   └── en.json
-│   │   ├── document_parser         : text extraction from documents
-│   │   │   ├── pdf_parser
-│   │   │   │   ├── __init__.py         : main parsing method
-│   │   │   │   ├── combination.py      : subset of utils/image/bounding_box/combination.py
-│   │   │   │   ├── pdfminer_parser.py  : parser based on the pdfminer extraction library
-│   │   │   │   ├── post_processing.py  : post processing for pypdfium2_parser
-│   │   │   │   ├── pypdf_parser.py     : parser based on the pypdf extraction library
-│   │   │   │   └── pypdfium2_parser.py : parser based on the pypdfium2 extraction library
-│   │   │   ├── __init__.py
-│   │   │   └── docx_parser.py
-│   │   │   ├── html_parser.py
-│   │   │   └── md_parser.py
-│   │   │   ├── parser.py
-│   │   │   ├── parser_utils.py
-│   │   │   └── txt_parser.py
-│   │   ├── __init__.py
-│   │   ├── byte_pair_encoding.py   : BPE implementation
-│   │   ├── cleaners.py             : text cleaning methods
-│   │   ├── ctc_decoder.py          : (experimental) CTC-decoding
-│   │   ├── numbers.py              : numbers cleaning methods
-│   │   ├── sentencepiece_encoder.py    : custom encoder interfacing with the sentencepiece library
-│   │   ├── text_augmentation.py    : (experimental) token masking methods
-│   │   ├── text_encoder.py         : TextEncoder class
-│   │   └── text_processing.py      : custom text / logits processing functions
-│   ├── threading               : custom producer-consumer methods
-│   │   ├── __init__.py
-│   │   ├── consumer.py         : multi-threaded consumer with observers
-│   │   ├── priority_queue.py   : custom `PriorityQueue` with order consistency
-│   │   ├── producer.py         : multi-threaded generator with observers
-│   │   └── threaded_dict.py    : thread-safe `dict` with blocking get
-│   ├── __init__.py
-│   ├── comparison_utils.py     : convenient comparison features for various data types
-│   ├── embeddings.py           : embeddings saving / loading
-│   ├── file_utils.py           : data saving / loading
-│   ├── generic_utils.py        : generic features 
-│   ├── pandas_utils.py         : pandas custom features
-│   ├── plot_utils.py           : plotting functions
-│   ├── sequence_utils.py       : sequence manipulation
-│   ├── stream_utils.py         : function streaming interface
-│   └── wrapper_utils.py        : custom wrappers
-├── LICENSE
-├── Makefile
-├── README.md
+│   ├── audio                   : audio utilities
+│   │   ├── audio_annotation.py     : annotation features for new TTS/STT dataset creation
+│   │   ├── audio_io.py             : audio loading / writing
+│   │   ├── audio_player.py         : audio playback functionality
+│   │   ├── audio_processing.py     : audio normalization / processing
+│   │   ├── audio_recorder.py       : audio recording functionality
+│   │   ├── audio_stream.py         : audio streaming support
+│   │   ├── mkv_utils.py            : processing for .mkv video format
+│   │   ├── noisereducev1.py        : maintained version of the old `noisereduce` library
+│   │   └── stft.py                 : implementations of various mel-spectrogram methods
+│   ├── callbacks               : callback management system
+│   │   ├── __init__.py
+│   │   ├── callback.py             : base callback implementation
+│   │   ├── displayer.py            : display-related callbacks
+│   │   ├── file_saver.py           : file saving callbacks
+│   │   └── function_callback.py    : function-based callbacks
+│   ├── datasets                : dataset utilities
+│   │   ├── audio_datasets          : audio dataset implementations
+│   │   │   ├── common_voice.py         : Mozilla Common Voice dataset
+│   │   │   ├── libri_speech.py         : LibriSpeech dataset
+│   │   │   ├── processing.py           : audio dataset processing
+│   │   │   ├── siwis.py                : SIWIS dataset
+│   │   │   └── voxforge.py             : VoxForge dataset
+│   │   ├── builder.py               : dataset building utilities
+│   │   ├── loader.py                : dataset loading utilities
+│   │   └── summary.py               : dataset summary tools
+│   ├── image                   : image features
+│   │   ├── bounding_box            : features for bounding box manipulation
+│   │   │   ├── combination.py          : combines group of boxes
+│   │   │   ├── converter.py            : box format conversion
+│   │   │   ├── filters.py              : box filtering
+│   │   │   ├── locality_aware_nms.py   : LA-NMS implementation
+│   │   │   ├── metrics.py              : box metrics (IoU, etc.)
+│   │   │   ├── non_max_suppression.py  : NMS implementation
+│   │   │   ├── processing.py           : box processing
+│   │   │   └── visualization.py        : box extraction / drawing
+│   │   ├── custom_cameras.py       : custom camera implementations
+│   │   ├── image_io.py             : image loading / writing
+│   │   ├── image_normalization.py  : normalization schema
+│   │   └── image_processing.py     : image processing utilities
+│   ├── keras                   : keras and hardware acceleration utilities
+│   │   ├── ops                     : operation interfaces for different backends
+│   │   │   ├── builder.py              : operation builder
+│   │   │   ├── core.py                 : core operations
+│   │   │   ├── execution_contexts.py   : execution context management
+│   │   │   ├── image.py                : image operations
+│   │   │   ├── linalg.py               : linear algebra operations
+│   │   │   ├── math.py                 : mathematical operations
+│   │   │   ├── nn.py                   : neural network operations
+│   │   │   ├── numpy.py                : numpy-compatible operations
+│   │   │   └── random.py               : random operations
+│   │   ├── runtimes                : model runtime implementations
+│   │   │   ├── onnx_runtime.py         : ONNX runtime
+│   │   │   ├── runtime.py              : base runtime class
+│   │   │   ├── saved_model_runtime.py  : saved model runtime
+│   │   │   ├── tensorrt_llm_runtime.py : TensorRT LLM runtime
+│   │   │   └── tensorrt_runtime.py     : TensorRT runtime
+│   │   ├── compile.py              : graph compilation features
+│   │   └── gpu.py                  : GPU utilities
+│   ├── text                    : text-related features
+│   │   ├── abreviations
+│   │   ├── parsers                 : document parsers (new implementation)
+│   │   │   ├── combination.py      : box combination for parsing
+│   │   │   ├── docx_parser.py      : DOCX document parser
+│   │   │   ├── java_parser.py      : Java code parser
+│   │   │   ├── md_parser.py        : Markdown parser
+│   │   │   ├── parser.py           : base parser implementation
+│   │   │   ├── pdf_parser.py       : PDF parser
+│   │   │   ├── py_parser.py        : Python code parser
+│   │   │   └── txt_parser.py       : text file parser
+│   │   ├── cleaners.py             : text cleaning methods
+│   │   ├── ctc_decoder.py          : CTC-decoding
+│   │   ├── metrics.py              : text evaluation metrics
+│   │   ├── numbers.py              : numbers cleaning methods
+│   │   ├── sentencepiece_tokenizer.py : sentencepiece tokenizer interface
+│   │   ├── text_processing.py      : text processing functions
+│   │   ├── tokenizer.py            : tokenizer implementation
+│   │   └── tokens_processing.py    : token-level processing
+│   ├── threading               : threading utilities
+│   │   ├── async_result.py        : asynchronous result handling
+│   │   ├── priority_queue.py      : priority queue with order consistency
+│   │   ├── process.py             : process management
+│   │   └── stream.py              : data streaming implementation
+│   ├── comparison_utils.py     : convenient comparison features for various data types
+│   ├── distances.py            : distance and similarity metrics
+│   ├── embeddings.py           : embeddings saving / loading
+│   ├── file_utils.py           : data saving / loading
+│   ├── generic_utils.py        : generic features 
+│   ├── plot_utils.py           : plotting functions
+│   ├── sequence_utils.py       : sequence manipulation
+│   └── wrappers.py             : function wrappers and decorators
 ├── example_audio.ipynb
-├── example_clustering.ipynb
 ├── example_custom_operations.ipynb
 ├── example_generic.ipynb
 ├── example_image.ipynb
-├── example_producer_consumer.ipynb
 ├── example_text.ipynb
+├── LICENSE
+├── Makefile
+├── README.md
 └── requirements.txt
-
 ```
 
 The `loggers` module is independant from the `utils` one, making it easily reusable / extractable.
 
 ## Installation and usage
 
+See [the installation guide](https://github.com/yui-mhcp/blob/master/INSTALLATION.md) for a step-by-step installation :smile:
+
+Here is a summary of the installation procedure, if you have a working python environment :
 1. Clone this repository : `git clone https://github.com/yui-mhcp/data_processing.git`
 2. Go to the root of this repository : `cd data_processing`
 3. Install requirements : `pip install -r requirements.txt`
-4. Open an example notebook and follow the instructions ! The `make` command starts a `jupyter lab` server
-5. (Optional) run the tests : `python3 -m unittest discover -v -t . -s unitests -p test_*`
-
-**Some tests fail with the JAX backend, this will be solved in the next updates**
+4. Open an example notebook and follow the instructions !
 
 The `utils/{audio / image / text}` modules are not loaded by default, meaning that it is not required to install the requirements for a given submodule if you do not want to use it. In this case, you can simply remove the submodule and run the `pipreqs` command to compute a new `requirements.txt` file !
 
-**For audio processing** : `ffmpeg` is required for some audio processing functions (especially the `.mp3` support).
-
-**Important Note** : no backend (i.e., `tensorflow`, `torch`, ...) is installed by default, so make sure to properly install them before ! The `tensorflow` library is currently required when importing `utils.text` (other modules do not import `tensorflow by default`). The `tensorflow` removal is in progress and may not be perfectly working ;)
+**Important Note** : no backend (i.e., `tensorflow`, `torch`, ...) is installed by default, so make sure to properly install them before !
 
 ## TO-DO list
 
@@ -197,8 +183,6 @@ The `utils/{audio / image / text}` modules are not loaded by default, meaning th
 - [x] Implement specific `Mel spectrogram` implementations
     - [x] [Tacotron-2](https://github.com/NVIDIA/tactron2)
     - [x] [Whisper](https://github.com/whisper)
-    - [x] DeepSpeech 2
-    - [x] Conformer
 - [x] Run the `read_audio` function in `tf.data` pipeline
 - [x] Support audio formats :
     - [x] `wav`
@@ -210,9 +194,6 @@ The `utils/{audio / image / text}` modules are not loaded by default, meaning th
 
 - [x] Add image loading / writing support
 - [x] Add video loading / writing support
-- [x] Add support for segmentation masking
-    - [x] Add support for polygon masks
-    - [ ] Add support for RLE masks
 - [x] Add support for rotated bounding boxes
 - [x] Implement a keras 3 Non-Maximal Suppression (NMS)
 - [x] Implement the [Locality-Aware NMS (LaNMS)](https://github.com/argman/EAST)
@@ -236,7 +217,7 @@ The `utils/{audio / image / text}` modules are not loaded by default, meaning th
     - [ ] `.epub`
 - [x] Implement token-based logits masking
 - [x] Implement batch text encoding
-- [x] Add custom tokens to `TextEncoder`
+- [x] Add custom tokens to `Tokenizer`
 - [x] Implement CTC-decoding in keras 3 (µalready implemented in `keras 3.3`*)
 
 ### Generic utilities
@@ -258,17 +239,23 @@ Contacts :
 - **Mail** : `yui-mhcp@tutanota.com`
 - **[Discord](https://discord.com)** : yui0732
 
-### Terms of use
+This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0). See the [LICENSE](LICENSE) file for details.
 
-The goal of these projects is to support and advance education and research in Deep Learning technology. To facilitate this, all associated code is made available under the [GNU Affero General Public License (AGPL) v3](AGPLv3.licence), supplemented by a clause that prohibits commercial use (cf the [LICENCE](LICENCE) file).
+This license allows you to use, modify, and distribute the code, as long as you include the original copyright and license notice in any copy of the software/source. Additionally, if you modify the code and distribute it, or run it on a server as a service, you must make your modified version available under the same license.
 
-These projects are released as "free software", allowing you to freely use, modify, deploy, and share the software, provided you adhere to the terms of the license. While the software is freely available, it is not public domain and retains copyright protection. The license conditions are designed to ensure that every user can utilize and modify any version of the code for their own educational and research projects.
+For more information about the AGPL-3.0 license, please visit [the official website](https://www.gnu.org/licenses/agpl-3.0.html)
 
-If you wish to use this project in a proprietary commercial endeavor, you must obtain a separate license. For further details on this process, please contact me directly.
+## Notes and references 
 
-For my protection, it is important to note that all projects are available on an "As Is" basis, without any warranties or conditions of any kind, either explicit or implied. However, do not hesitate to report issues on the repository's project, or make a Pull Request to solve it :smile: 
+- The text cleaning module (`text.cleaners`) is inspired from [NVIDIA tacotron2](https://github.com/NVIDIA/tacotron2) repository. Their implementation of `Short-Time Fourrier Transform (STFT)` is also available in `audio/stft.py`, adapted in `keras 3`.
 
-### Citation
+- The provided embeddings in `example_data/embeddings/embeddings_256_voxforge.csv` has been generated based on samples of the [VoxForge](http://www.voxforge.org/) dataset, and embedded with an [AudioSiamese](https://github.com/yui-mhcp/siamese_networks) model (`audio_siamese_256_mel_lstm`).
+
+Tutorials :
+- The [Keras 3 API](https://keras.io/api/) which has been (*partially*) adapted in the `keras_utils/ops` module to enable `numpy` backend, and `tf.data` compatibility
+- The [tf.function](https://www.tensorflow.org/guide/function?hl=fr) guide
+
+## Citation
 
 If you find this project useful in your work, please add this citation to give it more visibility ! :yum:
 
@@ -281,13 +268,3 @@ If you find this project useful in your work, please add this citation to give i
     howpublished    = {\url{https://github.com/yui-mhcp}}
 }
 ```
-
-## Notes and references 
-
-- The text cleaning module (`text.cleaners`) is inspired from [NVIDIA tacotron2](https://github.com/NVIDIA/tacotron2) repository. Their implementation of `Short-Time Fourrier Transform (STFT)` is also available in `audio/stft.py`, adapted in `keras 3`.
-
-- The provided embeddings in `example_data/embeddings/embeddings_256_voxforge.csv` has been generated based on samples of the [VoxForge](http://www.voxforge.org/) dataset, and embedded with an [AudioSiamese](https://github.com/yui-mhcp/siamese_networks) model (`audio_siamese_256_mel_lstm`).
-
-Tutorials :
-- The [Keras 3 API](https://keras.io/api/) which has been (*partially*) adapted in the `keras_utils/ops` module to enable `numpy` backend, and `tf.data` compatibility
-- The [tf.function](https://www.tensorflow.org/guide/function?hl=fr) guide 

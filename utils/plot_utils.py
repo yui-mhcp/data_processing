@@ -1,5 +1,5 @@
-# Copyright (C) 2022-now yui-mhcp project author. All rights reserved.
-# Licenced under a modified Affero GPL v3 Licence (the "Licence").
+# Copyright (C) 2025-now yui-mhcp project author. All rights reserved.
+# Licenced under the Affero GPL v3 Licence (the "Licence").
 # you may not use this file except in compliance with the License.
 # See the "LICENCE" file at the root of the directory for the licence information.
 #
@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
 import math
 import logging
 import datetime
@@ -19,14 +18,9 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
 try:
-    from .pandas_utils import is_dataframe
-    from .keras_utils.ops import is_tensor, convert_to_numpy
+    from .keras.ops import is_tensor, convert_to_numpy
 except ImportError as e:
     is_tensor = lambda x: False
-    def is_dataframe(v):
-        if 'pandas' not in sys.modules: return False
-        import pandas as pd
-        return isinstance(v, pd.DataFrame)
 
 logger = logging.getLogger(__name__)
 
@@ -528,7 +522,7 @@ def plot_multiple(* args, size = 5, x_size = None, y_size = None, ncols = 2, nro
             datas.append(v)
         elif isinstance(v, dict):
             datas.append((v.pop('name', v.pop('label', None)), v))
-        elif is_dataframe(v):
+        elif hasattr(v, 'columns'):
             if by is not None:
                 for value, datas_i in v.groupby(by):
                     datas_i.pop(by)
@@ -628,7 +622,7 @@ def plot_multiple(* args, size = 5, x_size = None, y_size = None, ncols = 2, nro
         
     datas = []
     for v in args:
-        if is_dataframe(v): use_subplots = True
+        if hasattr(v, 'columns'): use_subplots = True
         _parse_arg(datas, v)
     
     data_names = [
@@ -970,7 +964,7 @@ def plot_embedding(embeddings = None, ids = None, marker = None, random_state = 
     assert embeddings is not None or x is not None
     if embeddings is None: embeddings = x
 
-    if is_dataframe(embeddings):
+    if hasattr(embeddings, 'columns'):
         from .embeddings import embeddings_to_np
         
         if 'id' in embeddings and ids is None:

@@ -1,5 +1,5 @@
 {
-    "name": "Text encoder",
+    "name": "Tokenizer",
     "vocab": [
         "_",
         "-",
@@ -150,7 +150,7 @@
         "ukn_76",
         "ukn_77"
     ],
-    "level": 0,
+    "level": "CHAR",
     "template": null,
     "lstrip": false,
     "rstrip": false,
@@ -165,10 +165,10 @@
     "byte_encoder": null,
     "bpe_end_of_word": null,
     "pad_token": "",
+    "sos_token": null,
+    "eos_token": null,
     "sep_token": null,
     "ukn_token": null,
-    "sos_token": "[SOS]",
-    "eos_token": "[EOS]",
     "mask_token": null,
     "additional_tokens": {},
     "sub_word_prefix": "",
