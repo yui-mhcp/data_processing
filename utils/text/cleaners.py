@@ -22,7 +22,7 @@ _special_symbols    = {
     '='     : {'fr' : 'égal',       'en' : 'equal'},
     '+'     : {'fr' : 'plus',       'en' : 'plus'},
     '/'     : {'fr' : 'slash',      'en' : 'slash'},
-    '*'     : {'fr' : 'étoile',     'en' : 'star'},
+    #'*'     : {'fr' : 'étoile',     'en' : 'star'},
     '^'     : {'fr' : 'chapeau',    'en' : 'hat'},
     '%'     : {'fr' : 'pourcent',   'en' : 'percent'},
     '§'     : {'fr' : 'paragraphe', 'en' : 'paragraph'},
@@ -43,6 +43,11 @@ _accents    = "âéèêîç"
 
 # List of (regular expression, replacement) pairs for abbreviations:
 _abreviations   = {}
+
+_tremas_patterns = {
+    '(aï)\b'   : 'aille',
+    '(ï)' : 'hi'
+}
 
 _letter_pronounciation  = {
     'a' : {'fr' : 'ha', 'en' : 'ae'},
@@ -192,6 +197,9 @@ def expand_special_symbols(text, lang = None, symbols = None, ** kwargs):
     
     return text
 
+def expand_tremas(text, ** kwargs):
+    return replace_patterns(text, _tremas_patterns, ** kwargs)
+
 def remove_tokens(text, tokens = [], ** kwargs):
     """ Replace all tokens in `tokens` (an iterable) by ' ' (space) """
     if not tokens: return text
@@ -322,8 +330,11 @@ def complete_cleaners(text,
         text = expand_numbers(text, lang = lang, expand_symbols = to_expand_symbols, ** kwargs)
         if to_expand_symbols:   text = expand_special_symbols(text, lang = lang, ** kwargs)
     
-    if lang == 'fr':        text = fr_convert_to_ascii(text, ** kwargs)
-    else:                   text = convert_to_ascii(text, ** kwargs)
+    if lang in ('fr', 'be'):
+        text = expand_tremas(text)
+        text = fr_convert_to_ascii(text, ** kwargs)
+    else:
+        lang = convert_to_ascii(text, ** kwargs)
     
     if max_repetition > 1:  text = collapse_repetitions(text, max_repetition)
     text = collapse_whitespace(text, ** kwargs)

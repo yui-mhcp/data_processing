@@ -38,7 +38,7 @@ def partial(fn = None, * _args, _force = False, _update_doc = False, ** _kwargs)
         
         Note that partial positional arguments are only usable in the non-decorator mode (which is also the case in `functools.partial`)
         
-        /!\ IMPORTANT : the below examples can be executed with `functools.partial`, and will give the exact same behavior
+        **IMPORTANT** : the below examples can be executed with `functools.partial`, and will give the exact same behavior
         
         Example :
         ```python

@@ -10,14 +10,12 @@
 # limitations under the License.
 
 import os
-import cv2
 import PIL
 import sys
 import glob
 import math
 import time
 import queue
-import ffmpeg
 import inspect
 import logging
 import warnings
@@ -159,21 +157,25 @@ def save_image(filename, image, ** kwargs):
         Return :
             - filename  : the image filename (the argument)
     """
+    import cv2
+    
     image = convert_to_uint8(image, ** kwargs)
     
     cv2.imwrite(filename, image[:, :, ::-1])
     return filename
 
 def set_video_audio(video_filename, audio_filename, codec = 'aac', bitrate = '128k'):
+    import ffmpeg
+    
     ffmpeg.output(
-        ffmpeg.input(video_filename),
-        ffmpeg.input(audio_filename, vn = None, dn = None),
+        ffmpeg.input(video_filename).video,
+        ffmpeg.input(audio_filename, vn = None, dn = None).audio,
         video_filename[:-4] + '_audio.mp4',
         acodec = codec,
         audio_bitrate = bitrate,
         loglevel = 'error',
         scodec   = 'copy'
-    ).global_args('-map', '0:v', '-map', '1:a?', '-map', '1:s?').overwrite_output().run()
+    ).overwrite_output().run()
 
 @timer
 def stream_camera(cam_id    = 0,
@@ -199,7 +201,7 @@ def stream_camera(cam_id    = 0,
                   transformed_file  = None,
                   
                   show  = True,
-                  flags = cv2.WINDOW_AUTOSIZE  | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_EXPANDED,
+                  flags = None,
                   play_audio    = True,
                   
                   ** kwargs
@@ -243,6 +245,10 @@ def stream_camera(cam_id    = 0,
             
             - kwargs    : forwarded to `transform_fn`
     """
+    import cv2
+    
+    if flags is None: flags = cv2.WINDOW_AUTOSIZE  | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_EXPANDED
+    
     # variable initialization
     if isinstance(cam_id, (int, str)):
         display_name = '{} {}'.format('Camera' if isinstance(cam_id, int) else 'File', cam_id)
@@ -411,6 +417,8 @@ def frame_generator(cam_id,
         Return :
             - n     : the number of generated frames
     """
+    import cv2
+    
     if not max_time:  max_time = -1
     if not nb_frames: nb_frames = -1
     fps_time = None if not fps else 1. / fps
@@ -539,6 +547,8 @@ def build_sprite(images, image_size = 128, directory = None, filename = 'sprite.
 @timer
 def _show_frame(frame, display_name = None, fps = None, audio_file = None, stream_state = {}):
     """ Displays `fps` frames per second with `cv2.imshow` """
+    import cv2
+    
     if 'last_show_time' not in stream_state and audio_file:
         from ..audio import play_audio
         stream_state['player'] = play_audio(audio_file, blocking = False)

@@ -107,7 +107,7 @@ def trim_silence_rms(audio,
                      min_silence = 0.1,
                      
                      block_size = 0.01,
-                        
+
                      replace_by  = 0.5,
                      min_voice_time  = 0.2,
                      

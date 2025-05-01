@@ -38,7 +38,7 @@ def pad_batch(batch, pad_value = 0, dtype = None, pad_mode = 'after'):
     
     if len(batch) == 1:
         return ops.expand_dims(ops.cast(batch[0], dtype) if dtype else batch[0], axis = 0)
-    elif len(set(tuple(b.shape) for b in batch)) == 1:
+    elif pad_value is None or len(set(tuple(b.shape) for b in batch)) == 1:
         return ops.stack(batch, axis = 0)
     
     batch = [ops.convert_to_numpy(b) for b in batch]

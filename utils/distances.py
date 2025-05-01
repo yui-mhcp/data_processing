@@ -29,6 +29,8 @@ def distance_method_wrapper(fn = None, name = None, is_similarity = False):
         if is_similarity:   _similarity_methods.add(key)
         return fn
     
+    if isinstance(fn, (str, tuple)): fn, name = None, fn
+    
     return wrapper if fn is None else wrapper(fn)
 
 similarity_method_wrapper = partial(distance_method_wrapper, is_similarity = True)
@@ -79,7 +81,7 @@ def distance(x, y, method, *, mode = None, as_matrix = False):
     
     return result
 
-@similarity_method_wrapper
+@similarity_method_wrapper('cosine')
 def cosine_similarity(x, y, *, as_matrix = False):
     return dot_product(
         ops.l2_normalize(x, axis = -1),
@@ -139,8 +141,7 @@ def knn(query   : TensorSpec(shape = (None, None), dtype = 'float') = None,
         
         weighted    : TensorSpec(shape = (), dtype = 'bool') = False,
         
-        return_scores   = False,
-        return_index    = False
+        return_scores   = False
        ):
     """
         Compute the k-nn decision procedure for a given x based on a list of labelled embeddings
@@ -181,9 +182,8 @@ def knn(query   : TensorSpec(shape = (None, None), dtype = 'float') = None,
     k_nearest_dists, k_nearest_idx = ops.top_k(- distance_matrix, k)
     
     if ids is None:
-        return k_nearest_idx if return_index else ops.take(
-            embeddings, k_nearest_idx, axis = 0
-        )
+        if distance_metric not in _similarity_methods: k_nearest_dists = -k_nearest_dists
+        return (k_nearest_dists, k_nearest_idx) if return_scores else k_nearest_idx
     
     unique_ids, pos_ids = ops.unique(ids, return_inverse = True)
     

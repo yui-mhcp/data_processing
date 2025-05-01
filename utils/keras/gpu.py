@@ -77,15 +77,29 @@ def _get_memory_usage_tf(gpu = 0, reset = True):
     if reset: tf.config.experimental.reset_memory_stats(gpu)
     return mem_usage
 
-def get_memory_usage(gpu = 0, ** kwargs):
-    if get_backend() == 'tensorflow':
+def _get_memory_usage_pt(gpu = 0, reset = True):
+    import torch
+
+    if isinstance(gpu, int): gpu = 'cuda:{}'.format(gpu)
+    
+    current = torch.cuda.memory_allocated(gpu)
+    peak    = torch.cuda.max_memory_allocated(gpu)
+    if reset: torch.cuda.reset_peak_memory_stats(gpu)
+    return {'current' : current, 'peak' : peak}
+
+def get_memory_usage(gpu = 0, backend = None, ** kwargs):
+    if not backend: backend = get_backend()
+        
+    if backend == 'tensorflow':
         return _get_memory_usage_tf(gpu, ** kwargs)
+    elif backend == 'torch':
+        return _get_memory_usage_pt(gpu, ** kwargs)
     else:
         logger.warning('`limi_gpu_memory` is not implemented for {}'.format(_limit_gpu_memory_tf()))
         return {}
 
-def show_memory(message = '', gpu = 0):
-    mem_usage = get_memory_usage(gpu = gpu)
+def show_memory(message = '', ** kwargs):
+    mem_usage = get_memory_usage(** kwargs)
     
     logger.info('{}{}'.format(message if not message else message + '\t: ', {
         k : '{:.3f} Gb'.format(v / 1024 ** 3) for k, v in mem_usage.items()

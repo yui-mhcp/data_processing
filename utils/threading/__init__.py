@@ -12,3 +12,4 @@
 from .priority_queue import PriorityQueue, MultiprocessingPriorityQueue, PriorityItem
 from .process import Process, run_in_thread
 from .stream import STOP, KEEP_ALIVE, IS_RUNNING, CONTROL, DataWithResult, FakeLock, Stream
+from .stream_request_manager import *

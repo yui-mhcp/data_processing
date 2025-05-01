@@ -20,7 +20,7 @@ import regex as re
 from datetime import datetime
 from functools import cached_property, cache
 
-from loggers import timer
+from loggers import Timer, timer
 from .. import load_json, dump_json, pad_batch, get_enum_item, is_dataframe, convert_to_str
 from ..keras import TensorSpec, ops, execute_eagerly
 from .ctc_decoder import ctc_decode
@@ -336,7 +336,7 @@ class Tokenizer:
                 t = self._tokenize(t)
                 tokens.extend(t if isinstance(t, (list, tuple)) else [t])
             return tokens
-        if self.level != TokenizerLevel.TOKEN or token in self._special_tokens:
+        elif self.level != TokenizerLevel.TOKEN or token in self._special_tokens:
             return token
         elif self.bpe_pairs is not None:
             return self._bpe_tokenize(token)
@@ -456,18 +456,20 @@ class Tokenizer:
     def encode_chat(self,
                     text = None,
                     *,
-               
+                    
                     system_prompt   = None,
                     answer_start    = None,
 
                     messages    = None,
                     message_format  = None,
+                    last_message_format = None,
                
                     encode  = True,
                     add_eos = None,
                     max_length  = None,
                     add_generation_prompt   = True,
                     
+                    return_text = False,
                     return_type = 'np',
                     
                     ** kwargs
@@ -478,42 +480,53 @@ class Tokenizer:
         
         kwargs   = convert_to_str(kwargs)
         kwargs.update(self.tokens)
+        
+        with Timer('messages preparation'):
+            if messages is None:                messages = []
+            elif isinstance(messages, dict):    messages = [messages]
+            elif isinstance(messages, str):     messages = [{'role' : 'user', 'content' : messages}]
+            elif not isinstance(messages, list):
+                raise ValueError('Unsupported `messages` argument : {}'.format(messages))
 
-        if messages is None:                messages = []
-        elif isinstance(messages, dict):    messages = [messages]
-        elif isinstance(messages, str):     messages = [{'role' : 'user', 'content' : messages}]
-        elif not isinstance(messages, list):
-            raise ValueError('Unsupported `messages` argument : {}'.format(messages))
-        
-        if text:
-            messages += [{'role' : 'user', 'content' : text}]
+            if text:
+                messages += [{'role' : 'user', 'content' : text}]
 
-        if message_format:
-            messages    = [{** msg, 'content' : format_text(
-                message_format, text = msg['content'], message = msg, ** {** kwargs, ** msg}
-            )} for msg in messages]
-        
-        if system_prompt and messages[0]['role'] != 'system':
-            messages = [
-                {'role' : 'system', 'content' : format_text(system_prompt, ** kwargs)}
-            ] + messages
-        
-        if 'date_string' in self.template and 'date_string' not in kwargs:
-            kwargs['date_string'] = datetime.now().strftime("%d %B %Y")
-        
+            if message_format:
+                messages    = [{
+                    ** (msg if isinstance(msg, dict) else msg.get_config()),
+                    'content' : format_text(
+                        message_format, text = msg['content'], message = msg, ** kwargs
+                    )
+                } for msg in messages]
+
+            if messages and last_message_format:
+                messages[-1] = {** messages[-1], 'content' : format_text(
+                    last_message_format, text = messages[-1]['content'], ** kwargs
+                )}
+            
+            if system_prompt and messages[0]['role'] != 'system':
+                messages = [
+                    {'role' : 'system', 'content' : format_text(system_prompt, messages = messages, ** kwargs)}
+                ] + messages
+
+            if 'date_string' in self.template and 'date_string' not in kwargs:
+                kwargs['date_string'] = datetime.now().strftime("%d %B %Y")
+
         for _ in range(max(1, len(messages) - 1)):
-            text = format_text(
-                self.template,
-                messages    = messages,
-                add_generation_prompt = add_generation_prompt,
-                ** kwargs
-            )
-            if add_generation_prompt and answer_start: text += answer_start
+            with Timer('apply template'):
+                text = format_text(
+                    self.template,
+                    messages    = messages,
+                    add_generation_prompt = add_generation_prompt,
+                    ** kwargs
+                )
+                if add_generation_prompt and answer_start: text += answer_start
             
             if not encode: return text
 
             encoded = self.encode(text, add_sos = False, add_eos = add_eos, return_type = return_type)
-            if not max_length or len(encoded) <= max_length: return encoded
+            if not max_length or len(encoded) <= max_length:
+                return encoded if not return_text else (text, encoded)
             
             messages.pop(1)
         
@@ -547,17 +560,24 @@ class Tokenizer:
         else:               _skip = []
         
         symbols = []
-        for token in tokens:
+        for i, token in enumerate(tokens):
             if token not in _skip: symbols.append(int(token))
-            if skip_padding and token == self.eos_token_idx and symbols: break
+            if (
+                (skip_padding and token == self.blank_token_idx)
+                and (i < len(tokens) - 1 and tokens[i + 1] == self.blank_token_idx)):
+                
+                break
         
         return self.decode_ids(symbols)
     
     def decode_ids(self, tokens):
-        symbols = [self._id_to_symbol.get(t, '') for t in tokens]
-        
-        sep = ' ' if self.word_split else ''
-        text = sep.join(symbols)
+        if isinstance(tokens, list):
+            symbols = [self._id_to_symbol.get(t, '') for t in tokens]
+
+            sep = ' ' if self.word_split else ''
+            text = sep.join(symbols)
+        else:
+            text = self._id_to_symbol.get(t, '')
         
         if self.byte_encoder is not None:
             try:

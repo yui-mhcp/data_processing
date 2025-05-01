@@ -18,6 +18,7 @@ import logging
 import inspect
 import argparse
 import datetime
+import importlib
 import multiprocessing.queues
 import numpy as np
 
@@ -196,6 +197,10 @@ def get_enum_item(value, enum, upper_names = True):
             raise KeyError('{} is not a valid {} : {}'.format(value, enum.__name__, tuple(enum)))
         return getattr(enum, value)
     return enum(value)
+
+
+def get_module_version(module):
+    return importlib.metadata.version(module)
 
 """ These functions manipulates `pd.DataFrame` """
 

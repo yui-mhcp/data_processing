@@ -215,6 +215,16 @@ class Stream(Thread):
             super().start()
         return self
 
+    def stop(self):
+        return self.join(force = True)
+        
+    def clear(self):
+        while True:
+            try:
+                self.stream.get_nowait()
+            except queue.Empty:
+                break
+        
     def items(self):
         """
             Iterates over tuples `(input, output)`, where `output` is equivalent to `self(input)`

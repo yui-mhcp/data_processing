@@ -15,7 +15,7 @@ import numpy as np
 from functools import cache
 
 from .. import timer
-from .builder import Ops
+from .builder import Ops, fast_is_not_tensor
 from .execution_contexts import is_tensorflow_graph, is_tensorflow_backend, is_torch_backend
 
 @cache
@@ -77,7 +77,7 @@ def is_array(x):
 
 @timer(debug = True)
 def is_tensor(x):
-    if not hasattr(x, 'device'):        return False
+    if fast_is_not_tensor(x):   return False
     elif 'keras' not in sys.modules:    return False
     elif is_tensorflow_backend() or not is_tensorflow_graph():
         return sys.modules['keras'].ops.is_tensor(x)
@@ -98,7 +98,7 @@ def convert_to_numpy(x, dtype = None, copy = False):
     elif dtype:
         dtype = dtype_to_str(dtype)
     
-    if hasattr(x, 'device') and is_tensorflow_graph():
+    if not fast_is_not_tensor(x) and is_tensorflow_graph():
         return convert_to_tf_tensor(x, dtype)
     elif hasattr(x, 'detach'):
         array = np.asarray(x.detach().cpu().numpy(), dtype = dtype)

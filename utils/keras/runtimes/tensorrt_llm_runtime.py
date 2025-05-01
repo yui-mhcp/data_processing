@@ -17,10 +17,12 @@ import logging
 import collections
 import numpy as np
 
+from threading import Lock
+
 from .. import timer
 from .runtime import Runtime
 from ..gpu import get_gpu_memory_infos
-        
+
 TRTLLMInferenceOutput = collections.namedtuple(
     "TRTLLMInferenceOutput", [
         "tokens", "lengths", "offset"
@@ -50,6 +52,8 @@ class TensorRTLLMRuntime(Runtime):
         self.eos_token  = -1
         self.pad_token  = -1
         
+        self._mutex = Lock()
+        self._request_index = 0
         self._max_input_length  = self.engine.max_input_len
     
     @property
@@ -67,15 +71,17 @@ class TensorRTLLMRuntime(Runtime):
                  *,
                  
                  tokens = None,
+                 num_beams  = None,
                  max_input_len  = None,
-                 stream_callback    = None,
-                 add_none_at_eos    = False,
                  encoder_output_lengths = None,
                  
                  allowed_tokens = None,
                  
                  decode_fn  = None,
-                 
+                 request_id = None,
+                 stream_callback    = None,
+                 add_none_at_eos    = False,
+
                  ** kwargs
                 ):
         import torch
@@ -94,11 +100,14 @@ class TensorRTLLMRuntime(Runtime):
         else:
             kwargs = {k : v for k, v in kwargs.items() if 'prompt' not in k and 'format' not in k}
         
+        if num_beams is None: num_beams = getattr(self.engine, 'max_beam_width', 1)
+        
         kwargs.update({
             'end_id'    : self.eos_token,
             'pad_id'    : self.pad_token,
-            'streaming' : stream_callback is not None,
+            'num_beams' : num_beams,
             'return_dict'   : True,
+            'num_return_sequences'  : 1,
             'output_sequence_lengths'   : True
         })
         if self.is_enc_dec:
@@ -131,27 +140,55 @@ class TensorRTLLMRuntime(Runtime):
                 ] for k, v in kwargs.items()
             }))
         
+        
         t0 = time.time()
         with torch.no_grad():
-            output = self.engine.generate(** kwargs)
-
+            
             if stream_callback is not None:
-                stream = output
-                for output in stream:
+                assert len(inputs) == 1, 'The streaming feature is not supported yet for batches'
+                
+                if not callable(stream_callback): stream_callback = stream_callback.put
+                with self._mutex:
+                    self._request_index += len(inputs)
+                    trt_llm_request_id = self._request_index
+
+                    stream = self.engine.generate(streaming = True, ** kwargs)
+                
+                for i, output in enumerate(stream):
+                    if i == 0 and logger.isEnabledFor(logging.INFO):
+                        logger.info('[TRT-LLM] Time to first token : {}'.format(
+                            _time_to_string(time.time() - t0)
+                        ))
+                    
                     out_i = TRTLLMInferenceOutput(
                         tokens  = output['output_ids'],
                         lengths = output['sequence_lengths'],
                         offset  = inp_lengths
                     )
-                    if decode_fn is not None: out_i = decode_fn(out_i)
-                    stream_callback(out_i)
+                    if decode_fn is not None:
+                        out_i = decode_fn(out_i)[0][0]
+                    
+                    if request_id is not None:
+                        out_i = (request_id, out_i)
+                    
+                    if stream_callback(out_i) is False:
+                        self.engine.session.cancel_request(trt_llm_request_id)
+                        stream_callback.send_status(request_id, 'stopped')
 
-                if add_none_at_eos: stream_callback(None)
+                if add_none_at_eos:
+                    final = None if request_id is None else (request_id, None)
+                    stream_callback(final)
+            else:
+                with self._mutex:
+                    self._request_index += len(inputs)
+
+                output = self.engine.generate(streaming = False, ** kwargs)
+
         
         if logger.isEnabledFor(logging.INFO):
             n = output['sequence_lengths'].sum().cpu().numpy() - sum(inp_lengths)
             t1 = time.time()
-            logger.info('{} tokens generated in {} ({:.3f} tokens/sec)'.format(
+            logger.info('[TRT-LLM] {} tokens generated in {} ({:.3f} tokens/sec)'.format(
                 n, _time_to_string(t1 - t0), n / (t1 - t0)
             ))
         
@@ -189,7 +226,7 @@ class TensorRTLLMRuntime(Runtime):
             tensor = [torch.from_numpy(np.array(tensor, dtype = 'int32')).cuda()]
         else:
             tensor = [
-                torch.from_numpy(np.array(t, dtype = dtype)).cuda() if not torch.is_tensor(t) else t
+                torch.from_numpy(np.asarray(t)).to(dtype = dtype, device = 'cuda') if not torch.is_tensor(t) else t
                 for t in tensor
             ]
         
@@ -282,8 +319,38 @@ def _get_logits_processor_map():
             for step in range(self.tokens.shape[-1]):
                 self.mask[:, :, step, self.tokens[:, step]] = False
 
+    class ToolStopper(tensorrt_llm.runtime.generation.LogitsProcessor):
+        def __init__(self):
+            self._tokenizer = None
+            self._requests  = None
+            
+            self.mask   = None
+        
+        @property
+        def tokenizer(self):
+            return self._tokenizer
+        
+        @tokenizer.setter
+        def tokenizer(self, value):
+            self._requests  = {}
+            
+            if value is not self._tokenizer:
+                self._tokenizer = value
+                self.mask   = np.ones((1, 1, value.vocab_size), dtype = bool)
+                self.mask[0, 0, self._tokenizer.blank_token_idx] = False
 
-    return {'token_masking' : TokenMasking()}
+        def __call__(self, req_id, logits, ids, stream_ptr, client_id):
+            if req_id not in self._requests: self._requests[req_id] = ''
+            self._requests[req_id] += self.tokenizer.decode_ids(ids[0][-1]).strip()
+            
+            if self._requests[req_id].endswith('```') and '```python' in self._requests[req_id]:
+                import torch
+                with torch.cuda.stream(torch.cuda.ExternalStream(stream_ptr)):
+                    logits[self.mask] = float('-inf')
+
+            return logits
+
+    return {'token_masking' : TokenMasking(), 'tool_stopper' : ToolStopper()}
 
 def _time_to_string(seconds):
     """ Returns a string representation of a time (given in seconds) """
@@ -299,3 +366,7 @@ def _time_to_string(seconds):
         '' if m == 0 else '{}min '.format(m),
         '{:.3f} sec'.format(s) if m + h == 0 else '{}sec'.format(int(s))
     )
+
+class _FakeLock:
+    def __enter__(self): pass
+    def __exit__(self, * args): pass

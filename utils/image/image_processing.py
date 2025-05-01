@@ -11,8 +11,6 @@
 
 import numpy as np
 
-from keras.layers import RandomRotation
-
 from loggers import timer
 from ..keras import TensorSpec, ops, graph_compile, execute_eagerly
 
@@ -103,8 +101,8 @@ def pad_image(image, size, pad_mode = 'after', pad_value = 0):
                 if `target_multiple_shape` is provided:
                     `shape(resized)[-3 : -1] % target_multiple_shape == [0, 0]`
         
-        /!\ WARNING /!\ if both are provided, it is possible that the 1st assertion will be False
-        /!\ WARNING /!\ If any of `target_shape` or `shape(image)` is 0, the function directly returns the image without resizing !
+        **WARNING** if both are provided, it is possible that the 1st assertion will be False
+        **WARNING** If any of `target_shape` or `shape(image)` is 0, the function directly returns the image without resizing !
     """
     
     pad_h = ops.maximum(0, size[0] - ops.shape(image)[-3])
@@ -208,6 +206,8 @@ def rotate_image(image,
             - fill_value    : filling value (only if `fill_mode = 'constant'`)
             - interpolation : the interpolation method
     """
+    from keras.layers import RandomRotation
+
     if not isinstance(angle, tuple): angle = (- angle / 360., - angle / 360.)
     
     rotation = RandomRotation(

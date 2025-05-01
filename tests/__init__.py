@@ -80,8 +80,9 @@ class CustomTestCase(unittest.TestCase):
         self.assertEqual(load_data(file), value, max_err = max_err, ** kwargs)
 
     def assertArray(self, x):
-        self.assertFalse(
-            hasattr(x, 'device'), 'The function must return a `np.ndarray`, got {}'.format(type(x))
+        self.assertTrue(
+            isinstance(x, (np.ndarray, np.integer, np.floating)),
+            'The function must return a `np.ndarray`, got {}'.format(type(x))
         )
 
     def assertTensor(self, x):

@@ -9,9 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from .video import *
 from .image_io import *
 from .bounding_box import *
-from .custom_cameras import HTTPScreenMirror
 from .image_normalization import get_image_normalization_fn
 from .image_processing import resize_image, pad_image, get_output_size
 

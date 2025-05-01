@@ -19,6 +19,10 @@ from .. import timer
 
 from .execution_contexts import *
 
+@timer(debug = True)
+def fast_is_not_tensor(x):
+    return not hasattr(x, 'device') or isinstance(x, (np.ndarray, np.floating, np.integer))
+
 class Ops:
     def __init__(self, name, disable_np = False, submodule = None, nested_arg = None, ** kwargs):
         self._keras_fn  = kwargs.pop('keras_fn', None)
@@ -141,13 +145,13 @@ class Ops:
     def _is_numpy(self, * args, ** kwargs):
         if self.nested_arg is None:
             return not (
-                any(hasattr(arg, 'device') for arg in args)
-                or any(hasattr(v, 'device') for v in kwargs.values())
+                any(not fast_is_not_tensor(arg) for arg in args)
+                or any(not fast_is_not_tensor(v) for v in kwargs.values())
             )
         elif self.nested_arg < len(args):
-            return not any(hasattr(arg, 'device') for arg in args[self.nested_arg])
+            return not any(not fast_is_not_tensor(arg) for arg in args[self.nested_arg])
         else:
-            return not any(hasattr(arg, 'device') for arg in kwargs[self.nested_argname])
+            return not any(not fast_is_not_tensor(arg) for arg in kwargs[self.nested_argname])
     
     @staticmethod
     def import_function(module, submodule, name):

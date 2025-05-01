@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import cv2
 import numpy as np
 
 from matplotlib import colors
@@ -37,6 +36,8 @@ def draw_boxes(image,
                
                ** kwargs
               ):
+    import cv2
+    
     if not isinstance(color, list): color = [color]
     if isinstance(image, str):      image = load_image(image)
     image   = ops.convert_to_numpy(image)

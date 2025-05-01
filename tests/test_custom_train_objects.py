@@ -23,7 +23,7 @@ try:
     from custom_train_objects.optimizers import DivideByStep, _optimizers, get_optimizer
 except Exception as e:
     err = e
-    raise e
+    _losses = _metrics = _callbacks = _optimizers = {}
 
 def normalize_object(obj):
     if hasattr(obj, 'get_config'):

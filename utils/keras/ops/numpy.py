@@ -73,6 +73,39 @@ normalize   = l2_normalize  = Ops(
     'normalize', tensorflow_fn = _tf_normalize, numpy_fn = _np_normalize
 )
 
+def _np_bincount(inputs, weights = None, minlength = None):
+    """
+        Count the number of occurrences of each value in `inputs`.
+        This is a highly optimized pure `numpy` implementation that supports 2D inputs.
+        
+        Arguments :
+            - x : 1D or 2D `ndarray` of ids
+            - weights   : array of weights
+                          - 1D : weight for each class (same length as `minlength`)
+                          - 2D : weight for each value in `inputs`
+            - minlength : minimal length for the output (default to `np.max(inputs)`)
+        Return :
+            - counts : 1D or 2D array of counts, with last dimension equal to `minlength`
+    """
+    if minlength is None:   minlength = np.max(inputs)
+    
+    if weights is None:
+        dtype = np.int32
+    else:
+        if weights.shape != inputs.shape: weights = weights[inputs]
+        dtype = weights.dtype
+    
+    if len(inputs.shape) == 1:
+        return np.bincount(inputs, weights = weights, minlength = minlength)
+    elif weights is None:
+        weights = 1
+    
+    result = np.zeros((len(inputs), minlength), dtype = dtype)
+    np.add.at(result, (np.arange(len(inputs))[:, None], inputs), weights)
+    return result
+
+bincount    = Ops('bincount', numpy_fn = _np_bincount)
+
 def _tf_svd(* args, compute_uv = True, ** kwargs):
     import tensorflow as tf
     out = tf.linalg.svd(* args, compute_uv = compute_uv, ** kwargs)

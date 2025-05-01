@@ -123,8 +123,8 @@ def _plot_lines(ax, lines, config, default_color, vertical, cmap = None):
     if not isinstance(lines, dict): lines = {None : lines}
 
     _labels = []
-    for label, lines in lines.items():
-        if not isinstance(lines, _data_iterable): lines = [lines]
+    for label, positions in lines.items():
+        if not isinstance(positions, _data_iterable): positions = [positions]
         lines_config = config if not label else {
             k : v if not isinstance(v, dict) else v[label] for k, v in config.items()
         }
@@ -132,12 +132,12 @@ def _plot_lines(ax, lines, config, default_color, vertical, cmap = None):
             lines_config['color'] = _normalize_colors(lines_config['color'], cmap)
         
         if label: _labels.append(label)
-        for i, line in enumerate(lines):
-            if label: config['label'] = label if i == 0 else None
+        for i, line in enumerate(positions):
+            if label: lines_config['label'] = label if i == 0 else None
             _drawing_method(
                 line, ** {k : _get_label_config(label, i, v) for k, v in lines_config.items()}
             )
-        return _labels
+    return _labels
 
 def _set_boxplot_colors(im, colors, facecolor, cmap = None):
     colors = _normalize_colors(colors, cmap = cmap) if isinstance(colors, _data_iterable) else [colors] * len(im['boxes'])
@@ -916,7 +916,7 @@ def plot_classification(scores = None, labels = None, k = 5, x = None, ** kwargs
     return plot(scores, ** kwargs)
     
 def plot_embedding(embeddings = None, ids = None, marker = None, random_state = None,
-                   projection = 'umap', remove_extreme = False, x = None, ** kwargs):
+                   projection = 'umap', x = None, ** kwargs):
     """
         Plot embeddings using the UMAP projection
         Arguments : 
@@ -927,26 +927,6 @@ def plot_embedding(embeddings = None, ids = None, marker = None, random_state = 
             - remove_extreme    : whether to remove extremas points which are to far away from other points
             - kwargs    : general config passed to plot()
     """
-    def filter_x(x, y, marker = None):
-        sorted_idx = np.argsort(x)
-        
-        x = x[sorted_idx]
-        y = y[sorted_idx]
-        if marker is not None: merker = marker[sorted_idx]
-        
-        subset = x[len(x) // 20 : - len(x) // 20]
-        mean = np.mean(subset)
-        mean_dist = np.mean(np.abs(subset - mean))
-        
-        dist = np.abs(x - mean)
-        keep = np.where(dist < mean_dist * 5)
-        
-        x = x[keep]
-        y = y[keep]
-        if marker is not None: marker = marker[keep]
-        
-        return x, y, marker
-    
     def reduce_embeddings(embeddings):
         if projection == 'umap':
             import umap
@@ -983,10 +963,6 @@ def plot_embedding(embeddings = None, ids = None, marker = None, random_state = 
         reduced_embeddings = embeddings
     
     x, y = reduced_embeddings[:, 0], reduced_embeddings[:, 1]
-
-    if remove_extreme:
-        x, y, marker = filter_x(x, y, marker)
-        y, x, marker = filter_x(y, x, marker)
     
     kwargs.update({'x' : x, 'y' : y, 'plot_type' : 'scatter', 'marker' : marker})
     if ids is not None:
