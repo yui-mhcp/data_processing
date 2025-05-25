@@ -16,19 +16,7 @@ Check the provided notebooks to have an overview of the available features !
 ├── tests               : custom unit-testing for the different modules
 │   ├── data               : test data files
 │   ├── __reproduction     : expected output files for reproducibility tests
-│   ├── test_custom_train_objects.py
-│   ├── test_utils_audio.py
-│   ├── test_utils_boxes.py
-│   ├── test_utils_compile.py
-│   ├── test_utils_distance.py
-│   ├── test_utils_embeddings.py
-│   ├── test_utils_files.py
-│   ├── test_utils_image.py
-│   ├── test_utils_keras.py
-│   ├── test_utils_ops.py
-│   ├── test_utils_sequence.py
-│   ├── test_utils_stream.py
-│   └── test_utils_text.py
+│   └── test_*.py          : test file
 ├── utils
 │   ├── audio                   : audio utilities
 │   │   ├── audio_annotation.py     : annotation features for new TTS/STT dataset creation
@@ -46,6 +34,19 @@ Check the provided notebooks to have an overview of the available features !
 │   │   ├── displayer.py            : display-related callbacks
 │   │   ├── file_saver.py           : file saving callbacks
 │   │   └── function_callback.py    : function-based callbacks
+│   ├── databases               : custom storage features
+│   │   ├── vectors                 : vector storage
+│   │   │   ├── faiss_index.py          : vector index using `faiss`
+│   │   │   ├── numpy_index.py          : vector index using `numpy`
+│   │   │   └── vector_index.py         : abstract vector index
+│   │   ├── database.py             : abstract database
+│   │   ├── database_wrapper.py     : database wrapping another database
+│   │   ├── json_dir.py             : database storing each entry in a `.json` file
+│   │   ├── json_file.py            : basic implementation storing all data in a `dict`
+│   │   ├── json.py                 : optimized `json`-based data storage
+│   │   ├── ordered_database_wrapper.py : wrapper that keeps track of insertion order (like an `OrderedDict`)
+│   │   ├── sqlite.py               : database using the `sqlite3` database
+│   │   └── vector_database.py      : wrapper storing both data and vectors
 │   ├── datasets                : dataset utilities
 │   │   ├── audio_datasets          : audio dataset implementations
 │   │   │   ├── common_voice.py         : Mozilla Common Voice dataset
@@ -66,7 +67,12 @@ Check the provided notebooks to have an overview of the available features !
 │   │   │   ├── non_max_suppression.py  : NMS implementation
 │   │   │   ├── processing.py           : box processing
 │   │   │   └── visualization.py        : box extraction / drawing
-│   │   ├── custom_cameras.py       : custom camera implementations
+│   │   ├── video                   : utilities for video I/O and stream
+│   │   │   ├── ffmpeg_reader.py        : video reader using `ffmpeg-python`
+│   │   │   ├── http_screen_mirror.py   : custom camera reading frames from the `HttpScreenMirror` app
+│   │   │   ├── filters.py              : box filtering
+│   │   │   ├── streaming.py            : camera streaming utilities
+│   │   │   └── writer.py               : video writers (`OpenCV` and `ffmpeg-python` are currently supported)
 │   │   ├── image_io.py             : image loading / writing
 │   │   ├── image_normalization.py  : normalization schema
 │   │   └── image_processing.py     : image processing utilities
@@ -144,9 +150,10 @@ Here is a summary of the installation procedure, if you have a working python en
 3. Install requirements : `pip install -r requirements.txt`
 4. Open an example notebook and follow the instructions !
 
-The `utils/{audio / image / text}` modules are not loaded by default, meaning that it is not required to install the requirements for a given submodule if you do not want to use it. In this case, you can simply remove the submodule and run the `pipreqs` command to compute a new `requirements.txt` file !
-
-**Important Note** : no backend (i.e., `tensorflow`, `torch`, ...) is installed by default, so make sure to properly install them before !
+**Important Notes** :
+- The `utils/{audio / image / text}` modules are not loaded by default, meaning that it is not required to install the requirements for a given submodule if you do not want to use it. In this case, you can simply remove the submodule and run the `pipreqs` command to compute a new `requirements.txt` file !
+- The `keras` module is not imported by default, and most of the features are available without ever importing it ! :smile:
+- The `requirements.txt` file does not include any backend (i.e., `tensorflow`, `torch`, `jax`, etc.), so make sure to manually install it if necessary !
 
 ## TO-DO list
 
@@ -155,21 +162,14 @@ The `utils/{audio / image / text}` modules are not loaded by default, meaning th
 - [x] Make example for text processing
 - [x] Make example for plot utils
 - [x] Make example for embeddings manipulation
-- [x] Make example for the `producer-consumer` utility
 - [x] Make the code keras-3 compatible
-    - [x] Update the `audio` module
-    - [x] Update the `image` module
-    - [x] Update the `text` module
-    - [x] Update the `utils` module
-    - [x] Make unit-testing to check correctness for the different keras backends
-    - [x] Make unit-testing for the `graph_compile` and `executing_eagerly` in all backends
-    - [x] Make every function compatible with `tf.data`, no matter the keras backend (see `example_custom_ops.ipynb` for more information)
+- [x] Remove `keras` from dependencies (i.e., features that do not require `keras` should work even if `keras` is not installed)
 - [x] Enable any backend to be aware of XLA/eager execution (i.e., `executing_eagerly` function)
 - [x] Enable `graph_compile` to support all backends compilation
     - [x] `tensorflow` backend (`tf.function`)
     - [x] `torch` backend (`torch.compile`)
     - [x] `jax` backend (`jax.jit`)
-- [x] Auto-detect `static_argnames` for the `jax.jit` compilation
+    - [x] Auto-detect `static_argnames` for the `jax.jit` compilation
 - [x] Allow `tf.function` with `graph_compile` regardless of the `keras` backend
 - [ ] Add GPU features for all backends
     - [x] `tensorflow` backend
@@ -184,11 +184,6 @@ The `utils/{audio / image / text}` modules are not loaded by default, meaning th
     - [x] [Tacotron-2](https://github.com/NVIDIA/tactron2)
     - [x] [Whisper](https://github.com/whisper)
 - [x] Run the `read_audio` function in `tf.data` pipeline
-- [x] Support audio formats :
-    - [x] `wav`
-    - [x] `mp3`
-    - [x] Any `librosa` format
-    - [x] Any `ffmpeg` format (video support)
 
 ### Image
 
@@ -218,7 +213,7 @@ The `utils/{audio / image / text}` modules are not loaded by default, meaning th
 - [x] Implement token-based logits masking
 - [x] Implement batch text encoding
 - [x] Add custom tokens to `Tokenizer`
-- [x] Implement CTC-decoding in keras 3 (µalready implemented in `keras 3.3`*)
+- [x] Add `CTC`-decoding
 
 ### Generic utilities
 
@@ -233,6 +228,16 @@ The `utils/{audio / image / text}` modules are not loaded by default, meaning th
     - [x] Classification result
     - [x] Confusion matrix (or any matrix)
 
+## Notes and references 
+
+- The text cleaning module (`text.cleaners`) is inspired from [NVIDIA tacotron2](https://github.com/NVIDIA/tacotron2) repository. Their implementation of `Short-Time Fourrier Transform (STFT)` is also available in `audio/stft.py`, adapted in `keras 3`.
+
+- The provided embeddings in `example_data/embeddings/embeddings_256_voxforge.csv` has been generated based on samples of the [VoxForge](http://www.voxforge.org/) dataset, and embedded with an [AudioSiamese](https://github.com/yui-mhcp/siamese_networks) model (`audio_siamese_256_mel_lstm`).
+
+Tutorials :
+- The [Keras 3 API](https://keras.io/api/) which has been (*partially*) adapted in the `keras_utils/ops` module to enable `numpy` backend, and `tf.data` compatibility
+- The [tf.function](https://www.tensorflow.org/guide/function?hl=fr) guide
+
 ## Contacts and licence
 
 Contacts :
@@ -244,16 +249,6 @@ This project is licensed under the GNU Affero General Public License v3.0 (AGPL-
 This license allows you to use, modify, and distribute the code, as long as you include the original copyright and license notice in any copy of the software/source. Additionally, if you modify the code and distribute it, or run it on a server as a service, you must make your modified version available under the same license.
 
 For more information about the AGPL-3.0 license, please visit [the official website](https://www.gnu.org/licenses/agpl-3.0.html)
-
-## Notes and references 
-
-- The text cleaning module (`text.cleaners`) is inspired from [NVIDIA tacotron2](https://github.com/NVIDIA/tacotron2) repository. Their implementation of `Short-Time Fourrier Transform (STFT)` is also available in `audio/stft.py`, adapted in `keras 3`.
-
-- The provided embeddings in `example_data/embeddings/embeddings_256_voxforge.csv` has been generated based on samples of the [VoxForge](http://www.voxforge.org/) dataset, and embedded with an [AudioSiamese](https://github.com/yui-mhcp/siamese_networks) model (`audio_siamese_256_mel_lstm`).
-
-Tutorials :
-- The [Keras 3 API](https://keras.io/api/) which has been (*partially*) adapted in the `keras_utils/ops` module to enable `numpy` backend, and `tf.data` compatibility
-- The [tf.function](https://www.tensorflow.org/guide/function?hl=fr) guide
 
 ## Citation
 
