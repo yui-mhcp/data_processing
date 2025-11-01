@@ -37,7 +37,9 @@ Check the provided notebooks to have an overview of the available features !
 │   ├── databases               : custom storage features
 │   │   ├── vectors                 : vector storage
 │   │   │   ├── faiss_index.py          : vector index using `faiss`
+│   │   │   ├── keras_index.py          : vector index using `keras`
 │   │   │   ├── numpy_index.py          : vector index using `numpy`
+│   │   │   ├── torch_index.py          : vector index using `torch`
 │   │   │   └── vector_index.py         : abstract vector index
 │   │   ├── database.py             : abstract database
 │   │   ├── database_wrapper.py     : database wrapping another database
@@ -45,7 +47,6 @@ Check the provided notebooks to have an overview of the available features !
 │   │   ├── json_file.py            : basic implementation storing all data in a `dict`
 │   │   ├── json.py                 : optimized `json`-based data storage
 │   │   ├── ordered_database_wrapper.py : wrapper that keeps track of insertion order (like an `OrderedDict`)
-│   │   ├── sqlite.py               : database using the `sqlite3` database
 │   │   └── vector_database.py      : wrapper storing both data and vectors
 │   ├── datasets                : dataset utilities
 │   │   ├── audio_datasets          : audio dataset implementations
@@ -110,6 +111,7 @@ Check the provided notebooks to have an overview of the available features !
 │   │   ├── ctc_decoder.py          : CTC-decoding
 │   │   ├── metrics.py              : text evaluation metrics
 │   │   ├── numbers.py              : numbers cleaning methods
+│   │   ├── paragraphs_processing.py   : paragraphs processing functions
 │   │   ├── sentencepiece_tokenizer.py : sentencepiece tokenizer interface
 │   │   ├── text_processing.py      : text processing functions
 │   │   ├── tokenizer.py            : tokenizer implementation
@@ -183,7 +185,7 @@ Here is a summary of the installation procedure, if you have a working python en
 - [x] Implement specific `Mel spectrogram` implementations
     - [x] [Tacotron-2](https://github.com/NVIDIA/tactron2)
     - [x] [Whisper](https://github.com/whisper)
-- [x] Run the `read_audio` function in `tf.data` pipeline
+- [x] Enable the `read_audio` function in `tf.data` pipeline
 
 ### Image
 
@@ -195,14 +197,14 @@ Here is a summary of the installation procedure, if you have a working python en
 
 ### Text
 
-- [x] Support text encoding in `tf.data` pipeline
+- [x] Support text tokenization/encoding in `tf.data` pipeline
 - [x] Implement text cleaning
     - [x] Abreviation extensions
     - [x] Time / dollar / number extensions
     - [x] unicode convertion
-- [x] Support token-splitting instead of word-splitting in `TextEncoder`
+- [x] Support token-splitting instead of word-splitting in `Tokenizer`
 - [x] Support `transformers` tokenizers convertion 
-- [x] Support `sentencepiece` encoders
+- [x] Support `sentencepiece` tokenizers
 - [x] Extract text from documents
     - [x] `.txt`
     - [x] `.md`
