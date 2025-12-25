@@ -170,7 +170,7 @@
     "sep_token": null,
     "ukn_token": null,
     "mask_token": null,
-    "additional_tokens": {},
+    "additional_tokens": [],
     "sub_word_prefix": "",
     "use_sos_and_eos": false,
     "add_special_tokens_at_end": true
