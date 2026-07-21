@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use this project in your work, please cite it as below."
+title: "data_processing: a modality-agnostic data pipeline & processing toolkit"
+abstract: >-
+  Modality-agnostic data pipeline & processing toolkit (audio / image / text /
+  datasets) with a keras-free `keras.ops` reimplementation — the shared foundation
+  of the yui-mhcp projects.
+authors:
+  - name: "yui"
+    email: "yui-mhcp@tutanota.com"
+type: software
+version: 1.0.0
+date-released: 2026-07-20
+license: AGPL-3.0-or-later
+url: "https://github.com/yui-mhcp"
+repository-code: "https://github.com/yui-mhcp/data_processing"
+keywords:
+  - deep-learning
+  - keras
+  - audio
+  - image
+  - text
+  - tensorrt
+  - data-processing

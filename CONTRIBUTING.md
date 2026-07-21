@@ -1,4 +1,4 @@
-# Contributing to YUI-MHCP
+# :yum: Contributing to YUI-MHCP
 
 Thank you for your interest in contributing to this project! Before submitting your contributions, please take a moment to read through this document.
 
@@ -56,7 +56,7 @@ Please follow as much as possible the following guidelines when developping new 
 
 1. Fork the repository and create your branch from `main`
 2. Ensure your code follows the style guidelines
-3. Include appropriate tests for your changes
+3. Include appropriate tests for your changes, and make sure the `pytest` suite passes (see the *Testing* section of the [README](README.md))
 4. Update documentation as necessary
 5. Submit your pull request with a clear description of the changes
 

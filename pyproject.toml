@@ -1,0 +1,158 @@
+[build-system]
+# >= 77 for PEP 639 SPDX `license` expressions
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "yui-data-processing"
+# Single-sourced from `__version__.py` — see [tool.setuptools.dynamic] below.
+dynamic = ["version"]
+description = "Modality-agnostic data pipeline & processing toolkit (audio / image / text / datasets) with a keras-free `keras.ops` — the shared foundation of the yui-mhcp projects"
+readme = "README.md"
+# 3.10+ for structural pattern matching (`match`/`case`). The deep-learning backends
+# (tensorflow, tensorrt-llm) are what pin a full workstation to 3.12 — see INSTALLATION.md.
+requires-python = ">=3.10"
+license = "AGPL-3.0-or-later"
+license-files = ["LICENCE"]
+authors = [{ name = "yui", email = "yui-mhcp@tutanota.com" }]
+keywords = ["deep-learning", "keras", "audio", "image", "text", "tensorrt", "data-processing"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Operating System :: OS Independent",
+]
+
+# Common `import utils` / `import loggers` socle (eager + lazy). Deliberately free
+# of keras / tensorflow / torch: `utils/keras/ops` reimplements `keras.ops` on numpy.
+dependencies = [
+    "numpy",
+    "tqdm",             # utils/file_utils.py
+    "pyyaml",           # utils/file_utils.py
+    "matplotlib",       # utils/plot_utils.py, re-exported by utils/__init__.py
+    "requests",         # loggers/telegram_handler.py
+    "h5py",             # utils/file_utils.py: hdf5 load/dump
+    "msgspec",          # utils/file_utils.py: fast json (guarded by try/except)
+]
+
+[project.urls]
+Homepage = "https://github.com/yui-mhcp"
+Repository = "https://github.com/yui-mhcp/data_processing"
+Changelog = "https://github.com/yui-mhcp/data_processing/blob/main/CHANGELOG.md"
+Issues = "https://github.com/yui-mhcp/data_processing/issues"
+
+[project.optional-dependencies]
+# Modality sub-packages of `utils/` — install the ones you actually process.
+audio = [
+    "librosa",          # eager: utils/audio/{audio_io,stft}.py
+    "scipy",            # eager: utils/audio/{audio_io,audio_processing,stft}.py
+    "pydub",
+    "ffmpeg-python",
+    "pyaudio",
+    "moviepy<2",        # utils/audio/audio_io.py imports `moviepy.editor`, dropped in moviepy 2.x
+    "audiofile",
+    "ipython",          # notebook playback helpers
+]
+image = [
+    "pillow",           # eager
+    "opencv-python",
+    "ffmpeg-python",
+    "imageio",
+    "networkx",
+    "ipython",
+]
+text = [
+    "regex",            # eager
+    "unidecode",        # eager
+    "beautifulsoup4",
+    "python-docx",
+    "jinja2",
+    "num2words",
+    "pypdfium2",
+    "sentencepiece",
+]
+datasets = [
+    "pandas",
+    "tensorflow-datasets",
+    "scikit-learn",     # utils/datasets/builder.py: module-level train_test_split / shuffle
+]
+# Extra plotting features: embeddings projection + confusion matrix (both lazy-imported
+# in utils/plot_utils.py, so the base `import utils` works without them).
+plot = [
+    "scikit-learn",     # utils/plot_utils.py: TSNE projection + confusion_matrix
+    "umap-learn",       # utils/plot_utils.py: UMAP embeddings projection
+]
+
+# --- keras backends (mutually exclusive: pick the one matching your setup) ----
+# The socle is keras-free (utils/keras/ops reimplements keras.ops on numpy), but a real
+# backend can be installed to exercise the keras-backed ops / the [keras]-marked tests.
+torch = [
+    "keras>=3",
+    "torch",
+]
+tf = [
+    "keras>=3",
+    "tensorflow",
+]
+# `[keras]` is an alias of `[tf]` (self-referencing extra, needs pip >= 21.2).
+# Tied to [project].name: renaming the project breaks this alias.
+keras = [
+    "yui-data-processing[tf]",
+]
+
+dev = [
+    "pytest>=7.0",
+    "pytest-cov",
+    "pytest-xdist",
+    "pytest-timeout",   # per-test deadlock guard (see [tool.pytest.ini_options].timeout)
+]
+
+# This project ships only the data foundation: `utils` + `loggers`.
+[tool.setuptools.packages.find]
+include = ["utils*", "loggers*"]
+
+[tool.setuptools.dynamic]
+version = { attr = "__version__.__version__" }
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+norecursedirs = [
+    "data", "tmp", "__reproduction", "__pycache__", ".ipynb_checkpoints",
+    "notebooks", "pretrained_models",
+]
+addopts = "-ra --strict-markers"
+filterwarnings = ["ignore"]
+timeout = 60
+markers = [
+    "tensorflow: requires `tensorflow` to be installed (auto-skipped otherwise)",
+    "keras: requires `keras` to be installed, e.g. to build tensors (auto-skipped otherwise)",
+    "torch: requires `torch` to be installed (auto-skipped otherwise)",
+    "cv2: requires `opencv-python` (cv2) to be installed (auto-skipped otherwise)",
+    "gpu: requires a GPU to run",
+    "slow: slow test (heavy models / long compute) — deselect with -m 'not slow'",
+    "reproducibility: compares against a stored golden file",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["utils", "loggers"]
+omit = ["tests/*", "*/notebooks/*", "*/pretrained_models/*"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
